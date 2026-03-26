@@ -1,8 +1,8 @@
 import { Link } from "react-router-dom";
-import { Gem, Heart, Sparkles, Brain, Users, Flower2, Moon } from "lucide-react";
+import { Gem, Heart, Sparkles, Brain, Users, Flower2, Moon, type LucideIcon } from "lucide-react";
 import { mockMaterials } from "@/lib/mock-data";
 
-const iconMap: Record<string, React.ComponentType<{ className?: string; strokeWidth?: number }>> = {
+const iconMap: Record<string, LucideIcon> = {
   Gem, Heart, Sparkles, Brain, Users, Flower2, Moon,
 };
 
