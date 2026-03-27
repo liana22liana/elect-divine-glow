@@ -69,6 +69,15 @@ const AdminPage = () => {
     });
   };
 
+  const toggleUser = (id: string) => {
+    setExpandedUsers((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  };
+
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
