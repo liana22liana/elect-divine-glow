@@ -4,7 +4,7 @@ import { mockUser } from "@/lib/mock-data";
 import AmbassadorTimeline from "@/components/AmbassadorTimeline";
 
 const SUBSCRIPTION_LABELS: Record<string, { label: string; color: string }> = {
-  active: { label: "Активна", color: "bg-green-500" },
+  active: { label: "Активна", color: "bg-sky" },
   paused: { label: "Приостановлена", color: "bg-yellow-500" },
   cancelled: { label: "Отменена", color: "bg-destructive" },
 };
@@ -15,7 +15,7 @@ const ProfilePage = () => {
   return (
     <div className="space-y-6 pb-24">
       {/* Header */}
-      <div className="rounded-lg border border-border bg-card p-6 shadow-sm">
+      <div className="rounded-lg border border-border bg-sky/[0.15] p-6 shadow-sm">
         <div className="flex items-center gap-4">
           <div className="relative">
             <div className="flex h-20 w-20 items-center justify-center rounded-full bg-primary/10 overflow-hidden">
@@ -44,6 +44,8 @@ const ProfilePage = () => {
           </div>
         </div>
       </div>
+
+      <div className="h-px bg-sky/20" />
 
       {/* Subscription */}
       <div className="rounded-lg border border-border bg-card p-6 shadow-sm">
@@ -78,12 +80,16 @@ const ProfilePage = () => {
         </div>
       </div>
 
+      <div className="h-px bg-sky/20" />
+
       {/* Ambassador */}
       <AmbassadorTimeline
         currentStatus={mockUser.ambassador_status}
         subscriptionStartDate={mockUser.subscription_start_date}
         deliveryFormSubmitted={mockUser.delivery_form_submitted}
       />
+
+      <div className="h-px bg-sky/20" />
 
       {/* Logout */}
       <Button
