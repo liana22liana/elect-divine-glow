@@ -2,11 +2,13 @@ import { useState } from "react";
 import {
   Plus, Pencil, Trash2, Video, Headphones, Users as UsersIcon,
   Sparkles, Search, Layers, GripVertical, ChevronDown, ChevronRight,
+  Shield, Send,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { Switch } from "@/components/ui/switch";
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select";
@@ -19,7 +21,8 @@ import {
 } from "@/components/ui/alert-dialog";
 import {
   mockMaterials, mockUsers, mockHabitTemplates, LIBRARY_SECTIONS,
-  type LibrarySection, type LibrarySubsection,
+  AMBASSADOR_MILESTONES, mockAmbassadorGifts,
+  type LibrarySection, type LibrarySubsection, type AmbassadorStatus,
 } from "@/lib/mock-data";
 import { cn } from "@/lib/utils";
 
