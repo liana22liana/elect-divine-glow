@@ -1,47 +1,51 @@
 import { useState } from "react";
-import { Plus, Pencil, Trash2, Video, Headphones, Users as UsersIcon, Sparkles, Search } from "lucide-react";
+import {
+  Plus, Pencil, Trash2, Video, Headphones, Users as UsersIcon,
+  Sparkles, Search, Layers, GripVertical, ChevronDown, ChevronRight,
+} from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
+  Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select";
 import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
+  Dialog, DialogContent, DialogHeader, DialogTitle,
 } from "@/components/ui/dialog";
 import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
+  AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
+  AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { mockMaterials, mockUsers, mockHabitTemplates, CATEGORIES, type HabitTemplate } from "@/lib/mock-data";
+import {
+  mockMaterials, mockUsers, mockHabitTemplates, LIBRARY_SECTIONS,
+  type LibrarySection, type LibrarySubsection,
+} from "@/lib/mock-data";
 import { cn } from "@/lib/utils";
 
-type TabId = "materials" | "users" | "recommendations";
+type TabId = "materials" | "structure" | "users" | "recommendations";
 
 const AdminPage = () => {
   const [activeTab, setActiveTab] = useState<TabId>("materials");
   const [materialDialogOpen, setMaterialDialogOpen] = useState(false);
   const [recDialogOpen, setRecDialogOpen] = useState(false);
+  const [sectionDialogOpen, setSectionDialogOpen] = useState(false);
+  const [subsectionDialogOpen, setSubsectionDialogOpen] = useState(false);
   const [deleteId, setDeleteId] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
   const [filterCategory, setFilterCategory] = useState("all");
+  const [expandedSections, setExpandedSections] = useState<Set<string>>(new Set());
+  const [editingSectionId, setEditingSectionId] = useState<string | null>(null);
+  const [parentSectionId, setParentSectionId] = useState<string | null>(null);
+
+  // Material dialog state
+  const [matSectionId, setMatSectionId] = useState("");
+  const [matSubsectionId, setMatSubsectionId] = useState("");
+  const selectedMatSection = LIBRARY_SECTIONS.find((s) => s.id === matSectionId);
 
   const tabs = [
     { id: "materials" as const, label: "Материалы", icon: Video },
+    { id: "structure" as const, label: "Структура", icon: Layers },
     { id: "users" as const, label: "Участницы", icon: UsersIcon },
     { id: "recommendations" as const, label: "Рекомендации", icon: Sparkles },
   ];
@@ -51,6 +55,15 @@ const AdminPage = () => {
     const matchCat = filterCategory === "all" || t.category === filterCategory;
     return matchSearch && matchCat;
   });
+
+  const toggleSection = (id: string) => {
+    setExpandedSections((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  };
 
   return (
     <div className="space-y-6">
@@ -62,6 +75,12 @@ const AdminPage = () => {
           <Button className="h-11 gap-2 rounded-lg" onClick={() => setMaterialDialogOpen(true)}>
             <Plus className="h-4 w-4" strokeWidth={1.5} />
             Добавить
+          </Button>
+        )}
+        {activeTab === "structure" && (
+          <Button className="h-11 gap-2 rounded-lg" onClick={() => { setEditingSectionId(null); setSectionDialogOpen(true); }}>
+            <Plus className="h-4 w-4" strokeWidth={1.5} />
+            Добавить раздел
           </Button>
         )}
         {activeTab === "recommendations" && (
@@ -95,7 +114,7 @@ const AdminPage = () => {
       {activeTab === "materials" && (
         <div className="space-y-3">
           {mockMaterials.map((material) => {
-            const cat = CATEGORIES.find((c) => c.id === material.category);
+            const sec = LIBRARY_SECTIONS.find((s) => s.id === material.section_id);
             return (
               <div
                 key={material.id}
@@ -113,7 +132,7 @@ const AdminPage = () => {
                     {material.title}
                   </h3>
                   <p className="text-xs text-muted-foreground">
-                    {cat?.label} · {new Date(material.created_at).toLocaleDateString("ru-RU")}
+                    {sec?.name} · {new Date(material.created_at).toLocaleDateString("ru-RU")}
                   </p>
                 </div>
                 <div className="flex gap-2">
@@ -124,6 +143,80 @@ const AdminPage = () => {
                     <Trash2 className="h-4 w-4" strokeWidth={1.5} />
                   </button>
                 </div>
+              </div>
+            );
+          })}
+        </div>
+      )}
+
+      {/* Structure */}
+      {activeTab === "structure" && (
+        <div className="space-y-2">
+          {LIBRARY_SECTIONS.map((section) => {
+            const isExpanded = expandedSections.has(section.id);
+            const hasSubs = section.subsections.length > 0;
+            return (
+              <div key={section.id} className="rounded-lg border border-border bg-card overflow-hidden">
+                <div className="flex items-center gap-3 p-4">
+                  <GripVertical className="h-4 w-4 text-muted-foreground/50 cursor-grab" />
+                  {hasSubs ? (
+                    <button onClick={() => toggleSection(section.id)} className="p-0.5">
+                      {isExpanded ? (
+                        <ChevronDown className="h-4 w-4 text-muted-foreground" />
+                      ) : (
+                        <ChevronRight className="h-4 w-4 text-muted-foreground" />
+                      )}
+                    </button>
+                  ) : (
+                    <div className="w-5" />
+                  )}
+                  <div className="flex-1 min-w-0">
+                    <h3 className="text-sm font-medium text-foreground">{section.name}</h3>
+                    <p className="text-xs text-muted-foreground">
+                      {section.subsections.length > 0
+                        ? `${section.subsections.length} подразделов`
+                        : "Без подразделов"}
+                      {" · "}
+                      {mockMaterials.filter((m) => m.section_id === section.id && m.is_published).length} материалов
+                    </p>
+                  </div>
+                  <div className="flex gap-1">
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="h-8 px-2 text-xs"
+                      onClick={() => { setParentSectionId(section.id); setSubsectionDialogOpen(true); }}
+                    >
+                      <Plus className="h-3.5 w-3.5 mr-1" />
+                      Подраздел
+                    </Button>
+                    <button className="rounded-lg p-2 text-muted-foreground hover:bg-muted hover:text-foreground transition-colors">
+                      <Pencil className="h-4 w-4" strokeWidth={1.5} />
+                    </button>
+                    <button className="rounded-lg p-2 text-muted-foreground hover:bg-destructive/10 hover:text-destructive transition-colors">
+                      <Trash2 className="h-4 w-4" strokeWidth={1.5} />
+                    </button>
+                  </div>
+                </div>
+                {hasSubs && isExpanded && (
+                  <div className="border-t border-border bg-muted/30 px-4 py-2 space-y-1">
+                    {section.subsections.map((sub) => (
+                      <div key={sub.id} className="flex items-center gap-3 rounded-md px-3 py-2 hover:bg-muted/50">
+                        <GripVertical className="h-3.5 w-3.5 text-muted-foreground/40 cursor-grab" />
+                        <span className="flex-1 text-sm text-foreground">{sub.name}</span>
+                        <span className="text-xs text-muted-foreground">
+                          {mockMaterials.filter((m) => m.subsection_id === sub.id && m.is_published).length} мат.
+                        </span>
+                        <button className="rounded p-1.5 text-muted-foreground hover:bg-muted hover:text-foreground transition-colors">
+                          <Pencil className="h-3.5 w-3.5" strokeWidth={1.5} />
+                        </button>
+                        <button className="rounded p-1.5 text-muted-foreground hover:bg-destructive/10 hover:text-destructive transition-colors">
+                          <Trash2 className="h-3.5 w-3.5" strokeWidth={1.5} />
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                )}
               </div>
             );
           })}
@@ -170,7 +263,6 @@ const AdminPage = () => {
       {/* Recommendations */}
       {activeTab === "recommendations" && (
         <div className="space-y-4">
-          {/* Filters */}
           <div className="flex flex-col gap-3 sm:flex-row">
             <div className="relative flex-1">
               <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
@@ -187,17 +279,16 @@ const AdminPage = () => {
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">Все категории</SelectItem>
-                {CATEGORIES.map((cat) => (
-                  <SelectItem key={cat.id} value={cat.id}>{cat.label}</SelectItem>
+                {LIBRARY_SECTIONS.map((sec) => (
+                  <SelectItem key={sec.id} value={sec.id}>{sec.name}</SelectItem>
                 ))}
               </SelectContent>
             </Select>
           </div>
 
-          {/* List */}
           <div className="space-y-3">
             {filteredTemplates.map((template) => {
-              const cat = CATEGORIES.find((c) => c.id === template.category);
+              const sec = LIBRARY_SECTIONS.find((s) => s.id === template.category);
               const material = template.source_content_id
                 ? mockMaterials.find((m) => m.id === template.source_content_id)
                 : null;
@@ -212,7 +303,7 @@ const AdminPage = () => {
                   <div className="min-w-0 flex-1">
                     <h3 className="text-sm font-medium text-foreground">{template.title}</h3>
                     <p className="text-xs text-muted-foreground">
-                      {cat?.label} · {material ? `📎 ${material.title}` : "Без материала"} · {new Date(template.created_at).toLocaleDateString("ru-RU")}
+                      {sec?.name} · {material ? `📎 ${material.title}` : "Без материала"} · {new Date(template.created_at).toLocaleDateString("ru-RU")}
                     </p>
                     <p className="text-xs text-secondary mt-0.5">
                       Добавили {template.adopted_count} участниц
@@ -258,16 +349,29 @@ const AdminPage = () => {
             </div>
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
-                <Label>Категория</Label>
-                <Select>
+                <Label>Раздел</Label>
+                <Select value={matSectionId} onValueChange={(v) => { setMatSectionId(v); setMatSubsectionId(""); }}>
                   <SelectTrigger className="h-11"><SelectValue placeholder="Выберите" /></SelectTrigger>
                   <SelectContent>
-                    {CATEGORIES.map((cat) => (
-                      <SelectItem key={cat.id} value={cat.id}>{cat.label}</SelectItem>
+                    {LIBRARY_SECTIONS.map((sec) => (
+                      <SelectItem key={sec.id} value={sec.id}>{sec.name}</SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
               </div>
+              <div className="space-y-2">
+                <Label>Подраздел</Label>
+                <Select value={matSubsectionId} onValueChange={setMatSubsectionId} disabled={!selectedMatSection || selectedMatSection.subsections.length === 0}>
+                  <SelectTrigger className="h-11"><SelectValue placeholder={selectedMatSection?.subsections.length ? "Выберите" : "—"} /></SelectTrigger>
+                  <SelectContent>
+                    {selectedMatSection?.subsections.map((sub) => (
+                      <SelectItem key={sub.id} value={sub.id}>{sub.name}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+            <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label>Тип</Label>
                 <Select>
@@ -283,7 +387,73 @@ const AdminPage = () => {
               <Label>Ссылка на видео/аудио</Label>
               <Input placeholder="https://..." className="h-11" />
             </div>
+
+            {/* Additional materials section */}
+            <div className="space-y-3 border-t border-border pt-4">
+              <div className="flex items-center justify-between">
+                <Label className="text-base">Дополнительные материалы</Label>
+                <Button type="button" variant="outline" size="sm" className="h-8 gap-1 text-xs">
+                  <Plus className="h-3.5 w-3.5" />
+                  Добавить
+                </Button>
+              </div>
+              <p className="text-xs text-muted-foreground">
+                Добавьте дополнительные видео или аудио к этому материалу
+              </p>
+            </div>
+
             <Button type="button" className="h-11 w-full" onClick={() => setMaterialDialogOpen(false)}>
+              Сохранить
+            </Button>
+          </form>
+        </DialogContent>
+      </Dialog>
+
+      {/* Section dialog */}
+      <Dialog open={sectionDialogOpen} onOpenChange={setSectionDialogOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="font-heading text-xl">Новый раздел</DialogTitle>
+          </DialogHeader>
+          <form className="space-y-4">
+            <div className="space-y-2">
+              <Label>Название</Label>
+              <Input placeholder="Название раздела" className="h-11" />
+            </div>
+            <div className="space-y-2">
+              <Label>Иконка</Label>
+              <Select>
+                <SelectTrigger className="h-11"><SelectValue placeholder="Выберите иконку" /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="Gem">💎 Gem</SelectItem>
+                  <SelectItem value="Heart">❤️ Heart</SelectItem>
+                  <SelectItem value="Sparkles">✨ Sparkles</SelectItem>
+                  <SelectItem value="Brain">🧠 Brain</SelectItem>
+                  <SelectItem value="Users">👥 Users</SelectItem>
+                  <SelectItem value="Flower2">🌸 Flower</SelectItem>
+                  <SelectItem value="Moon">🌙 Moon</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <Button type="button" className="h-11 w-full" onClick={() => setSectionDialogOpen(false)}>
+              Сохранить
+            </Button>
+          </form>
+        </DialogContent>
+      </Dialog>
+
+      {/* Subsection dialog */}
+      <Dialog open={subsectionDialogOpen} onOpenChange={setSubsectionDialogOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="font-heading text-xl">Новый подраздел</DialogTitle>
+          </DialogHeader>
+          <form className="space-y-4">
+            <div className="space-y-2">
+              <Label>Название</Label>
+              <Input placeholder="Название подраздела" className="h-11" />
+            </div>
+            <Button type="button" className="h-11 w-full" onClick={() => setSubsectionDialogOpen(false)}>
               Сохранить
             </Button>
           </form>
@@ -306,12 +476,12 @@ const AdminPage = () => {
               <Textarea placeholder="Краткое описание (1-2 предложения)..." rows={3} />
             </div>
             <div className="space-y-2">
-              <Label>Категория</Label>
+              <Label>Раздел</Label>
               <Select>
-                <SelectTrigger className="h-11"><SelectValue placeholder="Выберите категорию" /></SelectTrigger>
+                <SelectTrigger className="h-11"><SelectValue placeholder="Выберите раздел" /></SelectTrigger>
                 <SelectContent>
-                  {CATEGORIES.map((cat) => (
-                    <SelectItem key={cat.id} value={cat.id}>{cat.label}</SelectItem>
+                  {LIBRARY_SECTIONS.map((sec) => (
+                    <SelectItem key={sec.id} value={sec.id}>{sec.name}</SelectItem>
                   ))}
                 </SelectContent>
               </Select>

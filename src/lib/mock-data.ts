@@ -1,13 +1,41 @@
+// ── Library Structure ──
+
+export interface LibrarySection {
+  id: string;
+  name: string;
+  icon: string;
+  order_index: number;
+  subsections: LibrarySubsection[];
+}
+
+export interface LibrarySubsection {
+  id: string;
+  section_id: string;
+  name: string;
+  order_index: number;
+}
+
+export interface AdditionalMaterial {
+  id: string;
+  content_id: string;
+  title: string;
+  type: "video" | "audio";
+  url: string;
+  order_index: number;
+}
+
 export interface Material {
   id: string;
   title: string;
   description: string;
-  category: string;
+  section_id: string;
+  subsection_id: string | null;
   type: "video" | "audio";
   video_url: string;
   thumbnail_url: string;
   created_at: string;
   is_published: boolean;
+  additional_materials?: AdditionalMaterial[];
 }
 
 export interface UserProfile {
@@ -18,44 +46,81 @@ export interface UserProfile {
   subscription_active: boolean;
 }
 
-export const CATEGORIES = [
-  { id: "money", label: "Деньги", icon: "Gem" },
-  { id: "relationships", label: "Отношения", icon: "Heart" },
-  { id: "reality", label: "Управление реальностью", icon: "Sparkles" },
-  { id: "mindset", label: "Мышление", icon: "Brain" },
-  { id: "experts", label: "Приглашённые эксперты", icon: "Users" },
-  { id: "body", label: "Тело", icon: "Flower2" },
-  { id: "practices", label: "Практики и медитации", icon: "Moon" },
-] as const;
+export const LIBRARY_SECTIONS: LibrarySection[] = [
+  { id: "money", name: "Деньги", icon: "Gem", order_index: 0, subsections: [] },
+  { id: "relationships", name: "Отношения", icon: "Heart", order_index: 1, subsections: [] },
+  { id: "reality", name: "Управление реальностью", icon: "Sparkles", order_index: 2, subsections: [] },
+  { id: "mindset", name: "Мышление", icon: "Brain", order_index: 3, subsections: [] },
+  { id: "experts", name: "Приглашённые эксперты", icon: "Users", order_index: 4, subsections: [] },
+  {
+    id: "body",
+    name: "Тело",
+    icon: "Flower2",
+    order_index: 5,
+    subsections: [
+      { id: "body-streams", section_id: "body", name: "Эфиры", order_index: 0 },
+      { id: "body-kundalini", section_id: "body", name: "Кундалини", order_index: 1 },
+      { id: "body-workouts", section_id: "body", name: "Тренировки", order_index: 2 },
+      { id: "body-nutrition", section_id: "body", name: "Питание", order_index: 3 },
+    ],
+  },
+  {
+    id: "practices",
+    name: "Практики и медитации",
+    icon: "Moon",
+    order_index: 6,
+    subsections: [
+      { id: "practices-meditations", section_id: "practices", name: "Медитации", order_index: 0 },
+      { id: "practices-practices", section_id: "practices", name: "Практики", order_index: 1 },
+    ],
+  },
+];
+
+// Backward-compatible helper: flat list of {id, label, icon} for components that need it
+export const CATEGORIES = LIBRARY_SECTIONS.map((s) => ({
+  id: s.id,
+  label: s.name,
+  icon: s.icon,
+}));
 
 export const mockMaterials: Material[] = [
   {
     id: "1",
     title: "Как выйти на новый уровень дохода",
     description: "В этом видео мы разберём ключевые блоки, которые мешают вам зарабатывать больше, и проработаем их через практические упражнения.",
-    category: "money",
+    section_id: "money",
+    subsection_id: null,
     type: "video",
     video_url: "https://www.youtube.com/embed/dQw4w9WgXcQ",
     thumbnail_url: "",
     created_at: "2025-03-20",
     is_published: true,
+    additional_materials: [
+      { id: "am1", content_id: "1", title: "Рабочая тетрадь: Денежные блоки", type: "video", url: "https://www.youtube.com/embed/dQw4w9WgXcQ", order_index: 0 },
+      { id: "am2", content_id: "1", title: "Аффирмации на изобилие", type: "audio", url: "", order_index: 1 },
+    ],
   },
   {
     id: "2",
     title: "Медитация на изобилие",
     description: "Глубокая медитация для настройки на частоту изобилия и благодарности.",
-    category: "practices",
+    section_id: "practices",
+    subsection_id: "practices-meditations",
     type: "audio",
     video_url: "",
     thumbnail_url: "",
     created_at: "2025-03-18",
     is_published: true,
+    additional_materials: [
+      { id: "am3", content_id: "2", title: "Гайд по медитации (аудио)", type: "audio", url: "", order_index: 0 },
+    ],
   },
   {
     id: "3",
     title: "Энергия отношений: притяжение и отталкивание",
     description: "Разбираем энергетические паттерны в отношениях и учимся выстраивать гармоничные связи.",
-    category: "relationships",
+    section_id: "relationships",
+    subsection_id: null,
     type: "video",
     video_url: "https://www.youtube.com/embed/dQw4w9WgXcQ",
     thumbnail_url: "",
@@ -66,7 +131,8 @@ export const mockMaterials: Material[] = [
     id: "4",
     title: "Трансформация мышления за 21 день",
     description: "Программа по изменению привычных паттернов мышления. Включает ежедневные практики и задания.",
-    category: "mindset",
+    section_id: "mindset",
+    subsection_id: null,
     type: "video",
     video_url: "https://www.youtube.com/embed/dQw4w9WgXcQ",
     thumbnail_url: "",
@@ -77,7 +143,8 @@ export const mockMaterials: Material[] = [
     id: "5",
     title: "Интервью с нутрициологом: питание и энергия",
     description: "Приглашённый эксперт — нутрициолог Мария Иванова — рассказывает о том, как питание влияет на нашу энергию.",
-    category: "experts",
+    section_id: "experts",
+    subsection_id: null,
     type: "video",
     video_url: "https://www.youtube.com/embed/dQw4w9WgXcQ",
     thumbnail_url: "",
@@ -88,7 +155,8 @@ export const mockMaterials: Material[] = [
     id: "6",
     title: "Йога для женского здоровья",
     description: "Мягкая практика йоги, направленная на поддержание женского здоровья и гормонального баланса.",
-    category: "body",
+    section_id: "body",
+    subsection_id: "body-workouts",
     type: "video",
     video_url: "https://www.youtube.com/embed/dQw4w9WgXcQ",
     thumbnail_url: "",
@@ -99,11 +167,60 @@ export const mockMaterials: Material[] = [
     id: "7",
     title: "Манифестация: как создавать свою реальность",
     description: "Пошаговая техника манифестации желаемой реальности через визуализацию и аффирмации.",
-    category: "reality",
+    section_id: "reality",
+    subsection_id: null,
     type: "video",
     video_url: "https://www.youtube.com/embed/dQw4w9WgXcQ",
     thumbnail_url: "",
     created_at: "2025-03-05",
+    is_published: true,
+  },
+  {
+    id: "8",
+    title: "Кундалини йога: пробуждение энергии",
+    description: "Практика кундалини йоги для активации внутренней энергии и раскрытия потенциала.",
+    section_id: "body",
+    subsection_id: "body-kundalini",
+    type: "video",
+    video_url: "https://www.youtube.com/embed/dQw4w9WgXcQ",
+    thumbnail_url: "",
+    created_at: "2025-03-03",
+    is_published: true,
+  },
+  {
+    id: "9",
+    title: "Эфир: Ответы на вопросы о теле",
+    description: "Прямой эфир с ответами на вопросы участниц о здоровье и теле.",
+    section_id: "body",
+    subsection_id: "body-streams",
+    type: "video",
+    video_url: "https://www.youtube.com/embed/dQw4w9WgXcQ",
+    thumbnail_url: "",
+    created_at: "2025-03-01",
+    is_published: true,
+  },
+  {
+    id: "10",
+    title: "Практика осознанного дыхания",
+    description: "Дыхательная практика для снятия стресса и восстановления энергии.",
+    section_id: "practices",
+    subsection_id: "practices-practices",
+    type: "audio",
+    video_url: "",
+    thumbnail_url: "",
+    created_at: "2025-02-28",
+    is_published: true,
+  },
+  {
+    id: "11",
+    title: "Правильное питание для энергии",
+    description: "Основы питания, которые помогут поддерживать высокий уровень энергии в течение дня.",
+    section_id: "body",
+    subsection_id: "body-nutrition",
+    type: "video",
+    video_url: "https://www.youtube.com/embed/dQw4w9WgXcQ",
+    thumbnail_url: "",
+    created_at: "2025-02-25",
     is_published: true,
   },
 ];
@@ -199,7 +316,6 @@ export const mockHabitTemplates: HabitTemplate[] = [
   },
 ];
 
-// Generate dates for the last 28 days
 function generateDates(daysBack: number): string[] {
   const dates: string[] = [];
   const today = new Date();
@@ -256,21 +372,18 @@ export const mockHabits: Habit[] = [
 ];
 
 export const mockHabitLogs: HabitLog[] = [
-  // h1 - daily meditation, completed most days
   ...last28.filter((_, i) => i % 7 !== 3 && i % 5 !== 0).map((date, i) => ({
     id: `hl1-${i}`,
     habit_id: "h1",
     date,
     completed: true,
   })),
-  // h2 - yoga 3x/week
   ...last28.filter((_, i) => i % 7 === 0 || i % 7 === 2 || i % 7 === 5).map((date, i) => ({
     id: `hl2-${i}`,
     habit_id: "h2",
     date,
     completed: true,
   })),
-  // h3 - mindset course with deadline
   ...last28.filter((_, i) => i % 7 === 1 || i % 7 === 3 || i % 7 === 4 || i % 7 === 6).slice(0, 8).map((date, i) => ({
     id: `hl3-${i}`,
     habit_id: "h3",

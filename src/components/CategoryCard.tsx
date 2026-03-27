@@ -1,6 +1,6 @@
 import { Link } from "react-router-dom";
 import { Gem, Heart, Sparkles, Brain, Users, Flower2, Moon, type LucideIcon } from "lucide-react";
-import { mockMaterials } from "@/lib/mock-data";
+import { mockMaterials, LIBRARY_SECTIONS } from "@/lib/mock-data";
 
 const iconMap: Record<string, LucideIcon> = {
   Gem, Heart, Sparkles, Brain, Users, Flower2, Moon,
@@ -14,11 +14,11 @@ interface CategoryCardProps {
 
 const CategoryCard = ({ id, label, icon }: CategoryCardProps) => {
   const Icon = iconMap[icon] || Gem;
-  const count = mockMaterials.filter((m) => m.category === id && m.is_published).length;
+  const count = mockMaterials.filter((m) => m.section_id === id && m.is_published).length;
 
   return (
     <Link
-      to={`/library?category=${id}`}
+      to={`/library?section=${id}`}
       className="flex flex-col items-center gap-3 rounded-lg border border-border bg-card p-6 shadow-sm transition-all hover:shadow-md hover:border-primary/30"
     >
       <div className="flex h-14 w-14 items-center justify-center rounded-full bg-primary/10">

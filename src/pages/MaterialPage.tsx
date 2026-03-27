@@ -1,7 +1,7 @@
 import { useParams, Link } from "react-router-dom";
-import { ArrowLeft, Video, Headphones } from "lucide-react";
+import { ArrowLeft, Video, Headphones, Play } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { mockMaterials, CATEGORIES } from "@/lib/mock-data";
+import { mockMaterials, LIBRARY_SECTIONS } from "@/lib/mock-data";
 
 const MaterialPage = () => {
   const { id } = useParams();
@@ -18,7 +18,9 @@ const MaterialPage = () => {
     );
   }
 
-  const category = CATEGORIES.find((c) => c.id === material.category);
+  const section = LIBRARY_SECTIONS.find((s) => s.id === material.section_id);
+  const subsection = section?.subsections.find((sub) => sub.id === material.subsection_id);
+  const additionalMaterials = material.additional_materials || [];
 
   return (
     <div className="space-y-6">
@@ -65,9 +67,14 @@ const MaterialPage = () => {
         </h1>
 
         <div className="flex flex-wrap items-center gap-3">
-          {category && (
+          {section && (
             <span className="rounded-full border border-primary/30 bg-primary/10 px-3 py-1 text-sm font-medium text-primary">
-              {category.label}
+              {section.name}
+            </span>
+          )}
+          {subsection && (
+            <span className="rounded-full border border-secondary/30 bg-secondary/10 px-3 py-1 text-sm font-medium text-secondary">
+              {subsection.name}
             </span>
           )}
           <span className="text-sm text-muted-foreground">
@@ -83,6 +90,42 @@ const MaterialPage = () => {
           {material.description}
         </p>
       </div>
+
+      {/* Additional materials */}
+      {additionalMaterials.length > 0 && (
+        <div className="space-y-3">
+          <h2 className="font-heading text-xl font-semibold text-foreground">
+            Дополнительные материалы
+          </h2>
+          <div className="space-y-2">
+            {additionalMaterials.map((am) => (
+              <div
+                key={am.id}
+                className="flex items-center gap-3 rounded-lg border border-border bg-card p-3 transition-colors hover:bg-muted/50"
+              >
+                <div className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-lg bg-primary/10">
+                  {am.type === "video" ? (
+                    <Video className="h-4 w-4 text-primary" strokeWidth={1.5} />
+                  ) : (
+                    <Headphones className="h-4 w-4 text-primary" strokeWidth={1.5} />
+                  )}
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-medium text-foreground truncate">
+                    {am.title}
+                  </p>
+                  <p className="text-xs text-muted-foreground">
+                    {am.type === "video" ? "Видео" : "Аудио"}
+                  </p>
+                </div>
+                <Button variant="ghost" size="sm" className="h-8 w-8 p-0 rounded-full">
+                  <Play className="h-4 w-4 text-primary" strokeWidth={1.5} />
+                </Button>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
     </div>
   );
 };

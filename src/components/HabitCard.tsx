@@ -3,7 +3,7 @@ import { Link } from "react-router-dom";
 import { Check, Flame, ExternalLink, Gem, Heart, Sparkles, Brain, Users, Flower2, Moon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
-import type { Habit, HabitLog } from "@/lib/mock-data";
+import { LIBRARY_SECTIONS, type Habit, type HabitLog } from "@/lib/mock-data";
 import { cn } from "@/lib/utils";
 
 const categoryIcons: Record<string, React.ElementType> = {
@@ -14,16 +14,6 @@ const categoryIcons: Record<string, React.ElementType> = {
   experts: Users,
   body: Flower2,
   practices: Moon,
-};
-
-const categoryLabels: Record<string, string> = {
-  money: "Деньги",
-  relationships: "Отношения",
-  reality: "Управление реальностью",
-  mindset: "Мышление",
-  experts: "Эксперты",
-  body: "Тело",
-  practices: "Практики",
 };
 
 interface HabitCardProps {
@@ -69,12 +59,13 @@ function getLast28Days(): string[] {
 const HabitCard = ({ habit, logs, onMarkToday }: HabitCardProps) => {
   const [animating, setAnimating] = useState(false);
   const Icon = categoryIcons[habit.category || "practices"] || Sparkles;
+  const section = LIBRARY_SECTIONS.find((s) => s.id === habit.category);
+  const sectionLabel = section?.name || habit.category || "";
   const streak = getStreak(logs);
   const completedDates = new Set(logs.filter((l) => l.completed).map((l) => l.date));
   const today = new Date().toISOString().split("T")[0];
   const markedToday = completedDates.has(today);
   const last28 = getLast28Days();
-
   const totalCompleted = logs.filter((l) => l.completed).length;
 
   const frequencyLabel =
@@ -91,7 +82,6 @@ const HabitCard = ({ habit, logs, onMarkToday }: HabitCardProps) => {
 
   return (
     <div className="rounded-2xl border border-border bg-card p-5 shadow-sm space-y-4">
-      {/* Header */}
       <div className="flex items-start justify-between gap-3">
         <div className="flex items-center gap-3">
           <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-primary/10">
@@ -102,7 +92,7 @@ const HabitCard = ({ habit, logs, onMarkToday }: HabitCardProps) => {
               {habit.title}
             </h3>
             <p className="text-xs text-muted-foreground">
-              {categoryLabels[habit.category || ""] || habit.category} · {frequencyLabel}
+              {sectionLabel} · {frequencyLabel}
             </p>
           </div>
         </div>
@@ -114,7 +104,6 @@ const HabitCard = ({ habit, logs, onMarkToday }: HabitCardProps) => {
         )}
       </div>
 
-      {/* Material link */}
       {habit.source_content_id && (
         <Link
           to={`/material/${habit.source_content_id}`}
@@ -125,7 +114,6 @@ const HabitCard = ({ habit, logs, onMarkToday }: HabitCardProps) => {
         </Link>
       )}
 
-      {/* Deadline progress or mini-calendar */}
       {habit.deadline && habit.total_target ? (
         <div className="space-y-2">
           <div className="flex items-center justify-between text-xs text-muted-foreground">
@@ -148,9 +136,7 @@ const HabitCard = ({ habit, logs, onMarkToday }: HabitCardProps) => {
                 key={date}
                 className={cn(
                   "h-5 w-5 rounded-full transition-colors mx-auto",
-                  completedDates.has(date)
-                    ? "bg-primary"
-                    : "bg-muted"
+                  completedDates.has(date) ? "bg-primary" : "bg-muted"
                 )}
                 title={date}
               />
@@ -159,7 +145,6 @@ const HabitCard = ({ habit, logs, onMarkToday }: HabitCardProps) => {
         </div>
       )}
 
-      {/* Mark today */}
       <Button
         onClick={handleMark}
         disabled={markedToday}
