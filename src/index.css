@@ -59,7 +59,8 @@
     --secondary: 193 18% 42%;
     --secondary-foreground: 36 24% 90%;
     --muted: 30 10% 20%;
-    --muted-foreground: 36 14% 60%;
+    --muted-foreground: 200 11% 60%;
+    --sky: 200 11% 60%;
     --accent: 193 18% 42%;
     --accent-foreground: 36 24% 90%;
     --destructive: 0 62.8% 30.6%;
