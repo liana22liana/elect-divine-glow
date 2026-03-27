@@ -1,10 +1,11 @@
-import { Home, BookOpen, User, LogOut, Shield } from "lucide-react";
+import { Home, BookOpen, Target, User, LogOut, Shield } from "lucide-react";
 import { NavLink } from "react-router-dom";
 import { cn } from "@/lib/utils";
 
 const navItems = [
   { to: "/", icon: Home, label: "Главная" },
   { to: "/library", icon: BookOpen, label: "Библиотека" },
+  { to: "/goals", icon: Target, label: "Цели" },
   { to: "/profile", icon: User, label: "Профиль" },
   { to: "/admin", icon: Shield, label: "Админ" },
 ];
