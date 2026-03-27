@@ -2,7 +2,7 @@ import { useRef } from "react";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import MaterialCard from "@/components/MaterialCard";
 import CategoryCard from "@/components/CategoryCard";
-import { mockMaterials, mockUser, CATEGORIES } from "@/lib/mock-data";
+import { mockMaterials, mockUser, LIBRARY_SECTIONS } from "@/lib/mock-data";
 
 const HomePage = () => {
   const scrollRef = useRef<HTMLDivElement>(null);
@@ -23,7 +23,6 @@ const HomePage = () => {
 
   return (
     <div className="space-y-10">
-      {/* Greeting */}
       <div>
         <h1 className="font-heading text-3xl font-semibold text-foreground lg:text-4xl">
           Добро пожаловать, {mockUser.name}
@@ -33,7 +32,6 @@ const HomePage = () => {
         </p>
       </div>
 
-      {/* New in club */}
       <section>
         <div className="mb-4 flex items-center justify-between">
           <h2 className="font-heading text-2xl font-semibold text-foreground">
@@ -67,14 +65,13 @@ const HomePage = () => {
         </div>
       </section>
 
-      {/* Categories */}
       <section>
         <h2 className="mb-4 font-heading text-2xl font-semibold text-foreground">
           Разделы
         </h2>
         <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4">
-          {CATEGORIES.map((cat) => (
-            <CategoryCard key={cat.id} {...cat} />
+          {LIBRARY_SECTIONS.map((sec) => (
+            <CategoryCard key={sec.id} id={sec.id} label={sec.name} icon={sec.icon} />
           ))}
         </div>
       </section>

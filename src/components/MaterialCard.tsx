@@ -1,13 +1,13 @@
 import { Video, Headphones } from "lucide-react";
 import { Link } from "react-router-dom";
-import { CATEGORIES, type Material } from "@/lib/mock-data";
+import { LIBRARY_SECTIONS, type Material } from "@/lib/mock-data";
 
 interface MaterialCardProps {
   material: Material;
 }
 
 const MaterialCard = ({ material }: MaterialCardProps) => {
-  const category = CATEGORIES.find((c) => c.id === material.category);
+  const section = LIBRARY_SECTIONS.find((s) => s.id === material.section_id);
 
   return (
     <Link
@@ -39,9 +39,9 @@ const MaterialCard = ({ material }: MaterialCardProps) => {
           {material.title}
         </h3>
         <div className="mt-2 flex items-center justify-between">
-          {category && (
+          {section && (
             <span className="rounded-full border border-primary/30 bg-primary/10 px-3 py-0.5 text-xs font-medium text-primary">
-              {category.label}
+              {section.name}
             </span>
           )}
           <span className="text-xs text-muted-foreground">

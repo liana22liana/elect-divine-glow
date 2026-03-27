@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Plus, Sparkles } from "lucide-react";
+import { Plus } from "lucide-react";
 import { format } from "date-fns";
 import { CalendarIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -13,7 +13,6 @@ import {
   DialogContent,
   DialogHeader,
   DialogTitle,
-  DialogTrigger,
 } from "@/components/ui/dialog";
 import {
   Popover,
@@ -28,7 +27,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
-import { mockHabitTemplates, mockMaterials, CATEGORIES } from "@/lib/mock-data";
+import { mockHabitTemplates, mockMaterials, LIBRARY_SECTIONS } from "@/lib/mock-data";
 import { cn } from "@/lib/utils";
 
 interface AddHabitDialogProps {
@@ -75,7 +74,6 @@ const AddHabitDialog = ({ open, onOpenChange }: AddHabitDialogProps) => {
             <TabsTrigger value="club">Из клуба</TabsTrigger>
           </TabsList>
 
-          {/* Custom habit */}
           <TabsContent value="custom" className="space-y-4 pt-2">
             <div className="space-y-2">
               <Label>Название</Label>
@@ -171,10 +169,9 @@ const AddHabitDialog = ({ open, onOpenChange }: AddHabitDialogProps) => {
             </Button>
           </TabsContent>
 
-          {/* From club */}
           <TabsContent value="club" className="space-y-3 pt-2">
             {mockHabitTemplates.map((template) => {
-              const cat = CATEGORIES.find((c) => c.id === template.category);
+              const section = LIBRARY_SECTIONS.find((s) => s.id === template.category);
               const material = template.source_content_id
                 ? mockMaterials.find((m) => m.id === template.source_content_id)
                 : null;
@@ -193,9 +190,9 @@ const AddHabitDialog = ({ open, onOpenChange }: AddHabitDialogProps) => {
                         {template.description}
                       </p>
                     </div>
-                    {cat && (
+                    {section && (
                       <span className="flex-shrink-0 rounded-full bg-secondary/10 px-2.5 py-0.5 text-xs font-medium text-secondary">
-                        {cat.label}
+                        {section.name}
                       </span>
                     )}
                   </div>
