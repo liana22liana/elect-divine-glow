@@ -1,6 +1,14 @@
-import { Video, Headphones } from "lucide-react";
+import { Video, Headphones, Lock } from "lucide-react";
 import { Link } from "react-router-dom";
-import { LIBRARY_SECTIONS, type Material } from "@/lib/mock-data";
+import {
+  LIBRARY_SECTIONS, mockLockedContent, mockUser, AMBASSADOR_MILESTONES,
+  type Material,
+} from "@/lib/mock-data";
+import {
+  Tooltip, TooltipContent, TooltipProvider, TooltipTrigger,
+} from "@/components/ui/tooltip";
+
+const STATUS_ORDER = [null, "rising", "becoming", "transformed", "reborn"];
 
 interface MaterialCardProps {
   material: Material;
@@ -8,12 +16,16 @@ interface MaterialCardProps {
 
 const MaterialCard = ({ material }: MaterialCardProps) => {
   const section = LIBRARY_SECTIONS.find((s) => s.id === material.section_id);
+  const locked = mockLockedContent.find((lc) => lc.content_id === material.id);
+  const userStatusIdx = STATUS_ORDER.indexOf(mockUser.ambassador_status);
+  const requiredIdx = locked ? STATUS_ORDER.indexOf(locked.required_status) : -1;
+  const isLocked = locked && requiredIdx > userStatusIdx;
+  const requiredLabel = isLocked
+    ? AMBASSADOR_MILESTONES.find((m) => m.status === locked.required_status)?.label
+    : null;
 
-  return (
-    <Link
-      to={`/material/${material.id}`}
-      className="group block overflow-hidden rounded-lg border border-border bg-card shadow-sm transition-shadow hover:shadow-md"
-    >
+  const card = (
+    <div className="group relative block overflow-hidden rounded-lg border border-border bg-card shadow-sm transition-shadow hover:shadow-md">
       <div className="relative aspect-video bg-muted">
         <div className="absolute inset-0 flex items-center justify-center">
           {material.type === "video" ? (
@@ -33,6 +45,11 @@ const MaterialCard = ({ material }: MaterialCardProps) => {
             </span>
           )}
         </div>
+        {isLocked && (
+          <div className="absolute inset-0 flex items-center justify-center bg-foreground/30 backdrop-blur-[2px]">
+            <Lock className="h-8 w-8 text-primary-foreground" strokeWidth={1.5} />
+          </div>
+        )}
       </div>
       <div className="p-4">
         <h3 className="font-heading text-lg font-semibold leading-tight text-foreground group-hover:text-primary transition-colors">
@@ -49,6 +66,27 @@ const MaterialCard = ({ material }: MaterialCardProps) => {
           </span>
         </div>
       </div>
+    </div>
+  );
+
+  if (isLocked) {
+    return (
+      <TooltipProvider>
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <div className="cursor-not-allowed">{card}</div>
+          </TooltipTrigger>
+          <TooltipContent>
+            <p>Открывается при статусе «{requiredLabel}»</p>
+          </TooltipContent>
+        </Tooltip>
+      </TooltipProvider>
+    );
+  }
+
+  return (
+    <Link to={`/material/${material.id}`}>
+      {card}
     </Link>
   );
 };

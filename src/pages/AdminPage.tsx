@@ -2,11 +2,13 @@ import { useState } from "react";
 import {
   Plus, Pencil, Trash2, Video, Headphones, Users as UsersIcon,
   Sparkles, Search, Layers, GripVertical, ChevronDown, ChevronRight,
+  Shield, Send,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { Switch } from "@/components/ui/switch";
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select";
@@ -19,7 +21,8 @@ import {
 } from "@/components/ui/alert-dialog";
 import {
   mockMaterials, mockUsers, mockHabitTemplates, LIBRARY_SECTIONS,
-  type LibrarySection, type LibrarySubsection,
+  AMBASSADOR_MILESTONES, mockAmbassadorGifts,
+  type LibrarySection, type LibrarySubsection, type AmbassadorStatus,
 } from "@/lib/mock-data";
 import { cn } from "@/lib/utils";
 
@@ -35,6 +38,7 @@ const AdminPage = () => {
   const [searchQuery, setSearchQuery] = useState("");
   const [filterCategory, setFilterCategory] = useState("all");
   const [expandedSections, setExpandedSections] = useState<Set<string>>(new Set());
+  const [expandedUsers, setExpandedUsers] = useState<Set<string>>(new Set());
   const [editingSectionId, setEditingSectionId] = useState<string | null>(null);
   const [parentSectionId, setParentSectionId] = useState<string | null>(null);
 
@@ -58,6 +62,15 @@ const AdminPage = () => {
 
   const toggleSection = (id: string) => {
     setExpandedSections((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  };
+
+  const toggleUser = (id: string) => {
+    setExpandedUsers((prev) => {
       const next = new Set(prev);
       if (next.has(id)) next.delete(id);
       else next.add(id);
@@ -226,37 +239,121 @@ const AdminPage = () => {
       {/* Users list */}
       {activeTab === "users" && (
         <div className="space-y-3">
-          {mockUsers.map((user) => (
-            <div
-              key={user.id}
-              className="flex items-center gap-4 rounded-lg border border-border bg-card p-4"
-            >
-              <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-full bg-primary/10">
-                <span className="text-sm font-semibold text-primary">
-                  {user.name.charAt(0)}
-                </span>
+          {mockUsers.map((user) => {
+            const isExpanded = expandedUsers.has(user.id);
+            const statusLabel = AMBASSADOR_MILESTONES.find((m) => m.status === user.ambassador_status)?.label;
+            const subColor = user.subscription_status === "active" ? "bg-green-500"
+              : user.subscription_status === "paused" ? "bg-yellow-500" : "bg-destructive";
+            const subLabel = user.subscription_status === "active" ? "Активна"
+              : user.subscription_status === "paused" ? "Приостановлена" : "Отменена";
+
+            return (
+              <div key={user.id} className="rounded-lg border border-border bg-card overflow-hidden">
+                <button
+                  onClick={() => toggleUser(user.id)}
+                  className="flex w-full items-center gap-4 p-4 text-left hover:bg-muted/30 transition-colors"
+                >
+                  <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-full bg-primary/10">
+                    <span className="text-sm font-semibold text-primary">
+                      {user.name.charAt(0)}
+                    </span>
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <h3 className="text-sm font-medium text-foreground">{user.name}</h3>
+                    <p className="text-xs text-muted-foreground">{user.email}</p>
+                  </div>
+                  <div className="flex items-center gap-3">
+                    {statusLabel && (
+                      <span className="hidden sm:inline-flex items-center gap-1 rounded-full border border-primary/30 bg-primary/10 px-2 py-0.5 text-xs font-medium text-primary">
+                        <Shield className="h-3 w-3" />
+                        {statusLabel}
+                        {user.ambassador_status_override && " (вручную)"}
+                      </span>
+                    )}
+                    <div className="flex items-center gap-1.5">
+                      <div className={`h-2 w-2 rounded-full ${subColor}`} />
+                      <span className="text-xs text-muted-foreground">{subLabel}</span>
+                    </div>
+                    {isExpanded ? (
+                      <ChevronDown className="h-4 w-4 text-muted-foreground" />
+                    ) : (
+                      <ChevronRight className="h-4 w-4 text-muted-foreground" />
+                    )}
+                  </div>
+                </button>
+
+                {isExpanded && (
+                  <div className="border-t border-border bg-muted/20 p-4 space-y-4">
+                    <div className="grid gap-4 sm:grid-cols-2">
+                      {/* Ambassador status */}
+                      <div className="space-y-2">
+                        <Label className="text-xs text-muted-foreground">Статус амбассадора</Label>
+                        <div className="flex items-center gap-2">
+                          <Switch checked={user.ambassador_status_override} />
+                          <span className="text-xs text-muted-foreground">Присвоить вручную</span>
+                        </div>
+                        <Select defaultValue={user.ambassador_status || ""}>
+                          <SelectTrigger className="h-9 text-sm">
+                            <SelectValue placeholder="Авто" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {AMBASSADOR_MILESTONES.map((m) => (
+                              <SelectItem key={m.status} value={m.status}>{m.label}</SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+
+                      {/* TG invite link */}
+                      <div className="space-y-2">
+                        <Label className="text-xs text-muted-foreground">Ссылка ТГ-канал (подарок 2 мес.)</Label>
+                        <div className="flex gap-2">
+                          <Input placeholder="https://t.me/+..." className="h-9 text-sm" />
+                          <Button variant="outline" size="sm" className="h-9 px-2">
+                            <Send className="h-3.5 w-3.5" />
+                          </Button>
+                        </div>
+                      </div>
+
+                      {/* Content gift 3 months */}
+                      <div className="space-y-2">
+                        <Label className="text-xs text-muted-foreground">Закрытый материал (подарок 3 мес.)</Label>
+                        <Select>
+                          <SelectTrigger className="h-9 text-sm">
+                            <SelectValue placeholder="Выберите материал" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {mockMaterials.map((m) => (
+                              <SelectItem key={m.id} value={m.id}>{m.title}</SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+
+                      {/* Physical gift status */}
+                      <div className="space-y-2">
+                        <Label className="text-xs text-muted-foreground">Физический подарок</Label>
+                        <Select defaultValue={user.delivery_form_submitted ? "submitted" : "not_submitted"}>
+                          <SelectTrigger className="h-9 text-sm">
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="not_submitted">Форма не заполнена</SelectItem>
+                            <SelectItem value="submitted">Форма заполнена</SelectItem>
+                            <SelectItem value="sent">Отправлен</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+                    </div>
+
+                    <p className="text-xs text-muted-foreground">
+                      Дата вступления: {new Date(user.created_at).toLocaleDateString("ru-RU")}
+                    </p>
+                  </div>
+                )}
               </div>
-              <div className="min-w-0 flex-1">
-                <h3 className="text-sm font-medium text-foreground">{user.name}</h3>
-                <p className="text-xs text-muted-foreground">{user.email}</p>
-              </div>
-              <div className="text-right">
-                <p className="text-xs text-muted-foreground">
-                  {new Date(user.created_at).toLocaleDateString("ru-RU")}
-                </p>
-                <div className="flex items-center justify-end gap-1.5 mt-1">
-                  <div
-                    className={`h-2 w-2 rounded-full ${
-                      user.subscription_active ? "bg-green-500" : "bg-destructive"
-                    }`}
-                  />
-                  <span className="text-xs text-muted-foreground">
-                    {user.subscription_active ? "Активна" : "Неактивна"}
-                  </span>
-                </div>
-              </div>
-            </div>
-          ))}
+            );
+          })}
         </div>
       )}
 

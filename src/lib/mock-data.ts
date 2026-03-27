@@ -38,13 +38,54 @@ export interface Material {
   additional_materials?: AdditionalMaterial[];
 }
 
+export type SubscriptionStatus = "active" | "paused" | "cancelled";
+export type AmbassadorStatus = "rising" | "becoming" | "transformed" | "reborn";
+
 export interface UserProfile {
   id: string;
   email: string;
   name: string;
   created_at: string;
   subscription_active: boolean;
+  subscription_status: SubscriptionStatus;
+  subscription_start_date: string;
+  subscription_end_date: string | null;
+  ambassador_status: AmbassadorStatus | null;
+  ambassador_status_override: boolean;
+  delivery_form_submitted: boolean;
+  avatar_url: string | null;
 }
+
+export interface AmbassadorGift {
+  id: string;
+  user_id: string;
+  milestone_months: 2 | 3 | 6 | 12;
+  unlocked_at: string;
+  gift_type: "telegram" | "content" | "physical";
+  content_id: string | null;
+  claimed: boolean;
+}
+
+export interface LockedContent {
+  id: string;
+  content_id: string;
+  required_status: AmbassadorStatus;
+}
+
+export interface AmbassadorMilestone {
+  months: number;
+  status: AmbassadorStatus;
+  label: string;
+  gift_description: string;
+  gift_type: "telegram" | "content" | "physical";
+}
+
+export const AMBASSADOR_MILESTONES: AmbassadorMilestone[] = [
+  { months: 2, status: "rising", label: "Восходящая", gift_description: "Доступ к закрытому ТГ-каналу", gift_type: "telegram" },
+  { months: 3, status: "becoming", label: "Становящаяся", gift_description: "Закрытый материал из библиотеки", gift_type: "content" },
+  { months: 6, status: "transformed", label: "Трансформированная", gift_description: "Физический подарок от Даши", gift_type: "physical" },
+  { months: 12, status: "reborn", label: "Возрождённая", gift_description: "Эксклюзивный подарок от Даши", gift_type: "physical" },
+];
 
 export const LIBRARY_SECTIONS: LibrarySection[] = [
   { id: "money", name: "Деньги", icon: "Gem", order_index: 0, subsections: [] },
@@ -231,12 +272,41 @@ export const mockUser: UserProfile = {
   name: "Елена",
   created_at: "2025-01-15",
   subscription_active: true,
+  subscription_status: "active",
+  subscription_start_date: "2025-01-15",
+  subscription_end_date: null,
+  ambassador_status: "becoming",
+  ambassador_status_override: false,
+  delivery_form_submitted: false,
+  avatar_url: null,
 };
 
 export const mockUsers: UserProfile[] = [
   mockUser,
-  { id: "2", email: "anna@example.com", name: "Анна", created_at: "2025-02-01", subscription_active: true },
-  { id: "3", email: "maria@example.com", name: "Мария", created_at: "2025-02-15", subscription_active: false },
+  {
+    id: "2", email: "anna@example.com", name: "Анна", created_at: "2025-02-01",
+    subscription_active: true, subscription_status: "active",
+    subscription_start_date: "2025-02-01", subscription_end_date: null,
+    ambassador_status: "rising", ambassador_status_override: false,
+    delivery_form_submitted: false, avatar_url: null,
+  },
+  {
+    id: "3", email: "maria@example.com", name: "Мария", created_at: "2025-02-15",
+    subscription_active: false, subscription_status: "cancelled",
+    subscription_start_date: "2025-02-15", subscription_end_date: "2025-04-15",
+    ambassador_status: null, ambassador_status_override: false,
+    delivery_form_submitted: false, avatar_url: null,
+  },
+];
+
+export const mockAmbassadorGifts: AmbassadorGift[] = [
+  { id: "ag1", user_id: "1", milestone_months: 2, unlocked_at: "2025-03-15", gift_type: "telegram", content_id: null, claimed: true },
+  { id: "ag2", user_id: "1", milestone_months: 3, unlocked_at: "2025-04-15", gift_type: "content", content_id: "3", claimed: false },
+];
+
+export const mockLockedContent: LockedContent[] = [
+  { id: "lc1", content_id: "3", required_status: "becoming" },
+  { id: "lc2", content_id: "7", required_status: "transformed" },
 ];
 
 // ── Habit Tracker ──
