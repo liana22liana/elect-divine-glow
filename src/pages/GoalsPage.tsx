@@ -44,7 +44,7 @@ const GoalsPage = () => {
       <div className="flex items-center justify-between">
         <div>
           <h1 className="font-heading text-3xl font-semibold text-foreground">
-            Мои цели
+            Трекер привычек
           </h1>
           <p className="mt-1 text-sm text-muted-foreground font-body">
             Каждый маленький шаг — это уже победа ✨
