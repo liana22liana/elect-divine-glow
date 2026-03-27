@@ -38,6 +38,7 @@ const AdminPage = () => {
   const [searchQuery, setSearchQuery] = useState("");
   const [filterCategory, setFilterCategory] = useState("all");
   const [expandedSections, setExpandedSections] = useState<Set<string>>(new Set());
+  const [expandedUsers, setExpandedUsers] = useState<Set<string>>(new Set());
   const [editingSectionId, setEditingSectionId] = useState<string | null>(null);
   const [parentSectionId, setParentSectionId] = useState<string | null>(null);
 
