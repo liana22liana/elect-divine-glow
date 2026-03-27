@@ -83,7 +83,7 @@ export interface AmbassadorMilestone {
 export const AMBASSADOR_MILESTONES: AmbassadorMilestone[] = [
   { months: 2, status: "rising", label: "Восходящая", gift_description: "Доступ к закрытому ТГ-каналу", gift_type: "telegram" },
   { months: 3, status: "becoming", label: "Становящаяся", gift_description: "Закрытый материал из библиотеки", gift_type: "content" },
-  { months: 6, status: "transformed", label: "Трансформированная", gift_description: "Физический подарок от Даши", gift_type: "physical" },
+  { months: 6, status: "transformed", label: "Трансформированная", gift_description: "Блокнот от Даши", gift_type: "physical" },
   { months: 12, status: "reborn", label: "Возрождённая", gift_description: "Эксклюзивный подарок от Даши", gift_type: "physical" },
 ];
 
