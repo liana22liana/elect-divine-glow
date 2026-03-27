@@ -9,6 +9,7 @@ import HomePage from "@/pages/HomePage";
 import LibraryPage from "@/pages/LibraryPage";
 import MaterialPage from "@/pages/MaterialPage";
 import ProfilePage from "@/pages/ProfilePage";
+import GoalsPage from "@/pages/GoalsPage";
 import AdminPage from "@/pages/AdminPage";
 import NotFound from "@/pages/NotFound";
 
@@ -26,6 +27,7 @@ const App = () => (
             <Route path="/" element={<HomePage />} />
             <Route path="/library" element={<LibraryPage />} />
             <Route path="/material/:id" element={<MaterialPage />} />
+            <Route path="/goals" element={<GoalsPage />} />
             <Route path="/profile" element={<ProfilePage />} />
             <Route path="/admin" element={<AdminPage />} />
           </Route>
