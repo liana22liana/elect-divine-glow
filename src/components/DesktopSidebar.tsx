@@ -1,6 +1,7 @@
 import { Home, BookOpen, Target, User, LogOut, Shield } from "lucide-react";
 import { NavLink } from "react-router-dom";
 import { cn } from "@/lib/utils";
+import { mockUser } from "@/lib/mock-data";
 
 const navItems = [
   { to: "/", icon: Home, label: "Главная" },
@@ -12,7 +13,7 @@ const navItems = [
 
 const DesktopSidebar = () => {
   return (
-    <aside className="fixed left-0 top-0 hidden h-screen w-64 flex-col border-r border-border bg-card/80 backdrop-blur-md lg:flex">
+    <aside className="fixed left-0 top-0 hidden h-screen w-64 flex-col border-r border-border bg-sidebar backdrop-blur-md lg:flex">
       <div className="flex flex-col items-center gap-1 px-6 py-8">
         <h1 className="font-heading text-2xl font-semibold tracking-wide text-foreground">
           ELECT
@@ -20,6 +21,7 @@ const DesktopSidebar = () => {
         <p className="text-xs text-muted-foreground tracking-widest">
           by Dasha Avilova
         </p>
+        <div className="mt-2 h-px w-12 bg-primary/60 rounded-full" />
       </div>
 
       <nav className="flex flex-1 flex-col gap-1 px-4">
@@ -30,9 +32,9 @@ const DesktopSidebar = () => {
             end={to === "/"}
             className={({ isActive }) =>
               cn(
-                "flex items-center gap-3 rounded-lg px-4 py-3 text-sm font-body transition-colors",
+                "flex items-center gap-3 rounded-xl px-4 py-3 text-sm font-body transition-all duration-200",
                 isActive
-                  ? "bg-primary/10 text-primary font-medium"
+                  ? "bg-primary/10 text-primary font-medium border-l-2 border-primary"
                   : "text-muted-foreground hover:bg-muted hover:text-foreground"
               )
             }
@@ -44,7 +46,17 @@ const DesktopSidebar = () => {
       </nav>
 
       <div className="border-t border-border px-4 py-4">
-        <button className="flex w-full items-center gap-3 rounded-lg px-4 py-3 text-sm text-muted-foreground transition-colors hover:bg-muted hover:text-foreground">
+        <div className="flex items-center gap-3 px-4 py-2 mb-2">
+          <div className="flex h-8 w-8 items-center justify-center rounded-full bg-primary/10 overflow-hidden">
+            {mockUser.avatar_url ? (
+              <img src={mockUser.avatar_url} alt="" className="h-full w-full object-cover" />
+            ) : (
+              <User className="h-4 w-4 text-primary" strokeWidth={1.5} />
+            )}
+          </div>
+          <span className="text-sm font-body text-foreground truncate">{mockUser.name}</span>
+        </div>
+        <button className="flex w-full items-center gap-3 rounded-xl px-4 py-3 text-sm text-muted-foreground transition-all duration-200 hover:bg-muted hover:text-foreground">
           <LogOut className="h-5 w-5" strokeWidth={1.5} />
           Выйти
         </button>
