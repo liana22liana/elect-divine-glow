@@ -1,22 +1,26 @@
 
 
-## Инвертировать логику отображения
+## Превью всегда на главной, toggle только в библиотеке
 
-Сейчас: превью ON → список, превью OFF → сетка карточек.
-Нужно наоборот: превью ON → сетка карточек (с обложками), превью OFF → компактный список.
+### Что нужно
 
-### Изменения
+На главной странице `MaterialCard` всегда рендерится в режиме карточек с обложками (превью). Переключатель остаётся только на странице библиотеки.
 
-**1. `src/pages/LibraryPage.tsx`**
-- Инвертировать условие className контейнера: `previewEnabled` → grid, `!previewEnabled` → flex-col
+### Изменение
 
-**2. `src/components/MaterialCard.tsx`**
-- Инвертировать условие рендера: `previewEnabled` → карточка с обложкой (текущий вид), `!previewEnabled` → компактная строка списка (горизонтальная строка с иконкой, названием, разделом и датой)
+**`src/pages/HomePage.tsx`** (строка 66)
+
+Передать `previewEnabled={true}` в `MaterialCard`:
+
+```tsx
+<MaterialCard material={material} previewEnabled={true} />
+```
+
+Больше ничего менять не нужно — `LibraryPage` уже имеет toggle, а `MaterialCard` уже поддерживает prop.
 
 ### Файлы
 
 | Файл | Изменение |
 |------|-----------|
-| `src/pages/LibraryPage.tsx` | Инвертировать условие layout |
-| `src/components/MaterialCard.tsx` | Инвертировать условие варианта рендера |
+| `src/pages/HomePage.tsx` | Добавить `previewEnabled={true}` в MaterialCard |
 
