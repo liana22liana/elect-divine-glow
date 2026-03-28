@@ -37,6 +37,57 @@ const MaterialCard = ({ material, previewEnabled = false }: MaterialCardProps) =
 
   const gradient = SECTION_GRADIENTS[material.section_id] || SECTION_GRADIENTS.practices;
 
+  const linkTo = previewEnabled
+    ? `/material/${material.id}?preview=1`
+    : `/material/${material.id}`;
+
+  // Compact list row (when preview is OFF)
+  if (!previewEnabled) {
+    const listRow = (
+      <div className="group flex items-center gap-3 rounded-xl border border-border bg-card px-4 py-3 transition-all hover:shadow-sm hover:border-primary/20">
+        <div className={`flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-lg bg-gradient-to-br ${gradient}`}>
+          {material.type === "video" ? (
+            <Video className="h-5 w-5 text-foreground/60" strokeWidth={1.5} />
+          ) : (
+            <Headphones className="h-5 w-5 text-foreground/60" strokeWidth={1.5} />
+          )}
+        </div>
+        <div className="min-w-0 flex-1">
+          <h3 className="truncate font-medium text-sm text-foreground group-hover:text-primary transition-colors">
+            {material.title}
+          </h3>
+        </div>
+        {section && (
+          <span className="hidden sm:inline-flex flex-shrink-0 rounded-full border border-secondary/30 bg-secondary/[0.12] px-2.5 py-0.5 text-xs font-medium text-secondary">
+            {section.name}
+          </span>
+        )}
+        <span className="flex-shrink-0 text-xs text-muted-foreground">
+          {new Date(material.created_at).toLocaleDateString("ru-RU")}
+        </span>
+        {isLocked && <Lock className="h-4 w-4 flex-shrink-0 text-muted-foreground" strokeWidth={1.5} />}
+      </div>
+    );
+
+    if (isLocked) {
+      return (
+        <TooltipProvider>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <div className="cursor-not-allowed">{listRow}</div>
+            </TooltipTrigger>
+            <TooltipContent>
+              <p>Открывается при статусе «{requiredLabel}»</p>
+            </TooltipContent>
+          </Tooltip>
+        </TooltipProvider>
+      );
+    }
+
+    return <Link to={`/material/${material.id}`}>{listRow}</Link>;
+  }
+
+  // Grid card (when preview is ON)
   const card = (
     <div className="group relative block overflow-hidden rounded-2xl border border-border bg-card shadow-sm transition-all duration-200 hover:shadow-md hover:border-primary/20">
       <div className={`relative aspect-video bg-gradient-to-br ${gradient}`}>
@@ -101,15 +152,7 @@ const MaterialCard = ({ material, previewEnabled = false }: MaterialCardProps) =
     );
   }
 
-  const linkTo = previewEnabled
-    ? `/material/${material.id}?preview=1`
-    : `/material/${material.id}`;
-
-  return (
-    <Link to={linkTo}>
-      {card}
-    </Link>
-  );
+  return <Link to={linkTo}>{card}</Link>;
 };
 
 export default MaterialCard;

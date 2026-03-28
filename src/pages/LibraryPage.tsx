@@ -130,7 +130,7 @@ const LibraryPage = () => {
       )}
 
       {/* Materials grid */}
-      <div className="grid grid-cols-1 gap-5 md:grid-cols-2 lg:grid-cols-3">
+      <div className={previewEnabled ? "grid grid-cols-1 gap-5 md:grid-cols-2 lg:grid-cols-3" : "flex flex-col gap-3"}>
         {filtered.map((material) => (
           <MaterialCard key={material.id} material={material} previewEnabled={previewEnabled} />
         ))}
