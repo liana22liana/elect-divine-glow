@@ -15,7 +15,7 @@ const ProfilePage = () => {
   return (
     <div className="space-y-6 pb-24">
       {/* Header */}
-      <div className="rounded-lg border border-border bg-sky/[0.15] p-6 shadow-sm">
+      <div className="rounded-lg border border-border bg-card p-6 shadow-sm">
         <div className="flex items-center gap-4">
           <div className="relative">
             <div className="flex h-20 w-20 items-center justify-center rounded-full bg-primary/10 overflow-hidden">
@@ -45,7 +45,7 @@ const ProfilePage = () => {
         </div>
       </div>
 
-      <div className="h-px bg-sky/20" />
+      <div className="h-px bg-border" />
 
       {/* Subscription */}
       <div className="rounded-lg border border-border bg-card p-6 shadow-sm">
@@ -80,7 +80,7 @@ const ProfilePage = () => {
         </div>
       </div>
 
-      <div className="h-px bg-sky/20" />
+      <div className="h-px bg-border" />
 
       {/* Ambassador */}
       <AmbassadorTimeline
@@ -89,7 +89,7 @@ const ProfilePage = () => {
         deliveryFormSubmitted={mockUser.delivery_form_submitted}
       />
 
-      <div className="h-px bg-sky/20" />
+      <div className="h-px bg-border" />
 
       {/* Logout */}
       <Button

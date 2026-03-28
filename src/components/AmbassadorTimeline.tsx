@@ -42,9 +42,9 @@ const AmbassadorTimeline = ({ currentStatus, subscriptionStartDate, deliveryForm
         <div className="hidden md:block">
           <div className="relative flex items-start justify-between">
             {/* Connecting line */}
-            <div className="absolute top-5 left-[10%] right-[10%] h-0.5 bg-sky/30" />
+            <div className="absolute top-5 left-[10%] right-[10%] h-0.5 bg-border" />
             <div
-              className="absolute top-5 left-[10%] h-0.5 bg-sky transition-all duration-700"
+              className="absolute top-5 left-[10%] h-0.5 bg-primary transition-all duration-700"
               style={{
                 width: currentIndex >= AMBASSADOR_MILESTONES.length
                   ? "80%"
@@ -143,7 +143,7 @@ const AmbassadorTimeline = ({ currentStatus, subscriptionStartDate, deliveryForm
                   {!isLast && (
                     <div className={cn(
                       "w-0.5 flex-1 min-h-[2rem]",
-                      isAchieved && !isCurrent ? "bg-sky" : "bg-sky/30"
+                      isAchieved && !isCurrent ? "bg-primary" : "bg-border"
                     )} />
                   )}
                 </div>
