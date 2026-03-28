@@ -47,7 +47,7 @@ const MaterialCard = ({ material }: MaterialCardProps) => {
         </div>
         {isLocked && (
           <div className="absolute inset-0 flex items-center justify-center bg-foreground/30 backdrop-blur-[2px]">
-            <Lock className="h-8 w-8 text-sky" strokeWidth={1.5} />
+            <Lock className="h-8 w-8 text-secondary" strokeWidth={1.5} />
           </div>
         )}
       </div>
@@ -57,7 +57,7 @@ const MaterialCard = ({ material }: MaterialCardProps) => {
         </h3>
         <div className="mt-2 flex items-center justify-between">
           {section && (
-            <span className="rounded-full border border-sky/30 bg-sky/[0.15] px-3 py-0.5 text-xs font-medium text-sky">
+            <span className="rounded-full border border-secondary/30 bg-secondary/15 px-3 py-0.5 text-xs font-medium text-secondary">
               {section.name}
             </span>
           )}
