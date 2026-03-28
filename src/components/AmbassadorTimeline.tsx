@@ -57,10 +57,11 @@ const AmbassadorTimeline = ({ currentStatus, subscriptionStartDate, deliveryForm
               const isFuture = milestoneStatusIdx > currentIndex;
 
               let progressText = "";
-              if (isCurrent && nextMilestoneIdx >= 0) {
-                const nextM = AMBASSADOR_MILESTONES[nextMilestoneIdx];
-                const targetDays = nextM.months * 30;
-                progressText = `${totalDays} из ${targetDays} дней`;
+              if (isFuture && idx === nextMilestoneIdx) {
+                const targetDays = milestone.months * 30;
+                if (totalDays < targetDays) {
+                  progressText = `${totalDays} из ${targetDays} дней`;
+                }
               }
 
               return (
@@ -111,10 +112,11 @@ const AmbassadorTimeline = ({ currentStatus, subscriptionStartDate, deliveryForm
             const isLast = idx === AMBASSADOR_MILESTONES.length - 1;
 
             let progressText = "";
-            if (isCurrent && nextMilestoneIdx >= 0) {
-              const nextM = AMBASSADOR_MILESTONES[nextMilestoneIdx];
-              const targetDays = nextM.months * 30;
-              progressText = `${totalDays} из ${targetDays} дней`;
+            if (isFuture && idx === nextMilestoneIdx) {
+              const targetDays = milestone.months * 30;
+              if (totalDays < targetDays) {
+                progressText = `${totalDays} из ${targetDays} дней`;
+              }
             }
 
             return (
