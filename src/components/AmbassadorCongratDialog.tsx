@@ -31,7 +31,7 @@ const AmbassadorCongratDialog = ({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-md bg-gradient-to-b from-card to-secondary/10">
+      <DialogContent className="sm:max-w-md bg-gradient-to-b from-card to-sky/10">
         <DialogHeader className="text-center items-center">
           <div className="mx-auto mb-2 flex h-14 w-14 items-center justify-center rounded-full bg-primary/20 animate-pulse">
             <Sparkles className="h-7 w-7 text-primary" />

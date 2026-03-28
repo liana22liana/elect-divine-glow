@@ -21,8 +21,8 @@ const CategoryCard = ({ id, label, icon }: CategoryCardProps) => {
       to={`/library?section=${id}`}
       className="flex flex-col items-center gap-3 rounded-lg border border-border bg-card p-6 shadow-sm transition-all hover:shadow-md hover:border-primary/30"
     >
-      <div className="flex h-14 w-14 items-center justify-center rounded-full bg-secondary/15">
-        <Icon className="h-7 w-7 text-secondary" strokeWidth={1.5} />
+      <div className="flex h-14 w-14 items-center justify-center rounded-full bg-sky/[0.15]">
+        <Icon className="h-7 w-7 text-sky" strokeWidth={1.5} />
       </div>
       <h3 className="text-center font-heading text-base font-semibold text-foreground leading-tight">
         {label}
