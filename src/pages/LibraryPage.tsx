@@ -1,12 +1,25 @@
+import { useState, useEffect } from "react";
 import { useSearchParams } from "react-router-dom";
 import MaterialCard from "@/components/MaterialCard";
-import { mockMaterials, LIBRARY_SECTIONS } from "@/lib/mock-data";
+import { mockMaterials, LIBRARY_SECTIONS, mockUser } from "@/lib/mock-data";
 import { cn } from "@/lib/utils";
+import { Switch } from "@/components/ui/switch";
+import { Eye } from "lucide-react";
+
+const PREVIEW_KEY = `preview_${mockUser.id}`;
 
 const LibraryPage = () => {
   const [searchParams, setSearchParams] = useSearchParams();
   const activeSection = searchParams.get("section") || "all";
   const activeSub = searchParams.get("sub") || "all";
+
+  const [previewEnabled, setPreviewEnabled] = useState(() => {
+    return localStorage.getItem(PREVIEW_KEY) === "true";
+  });
+
+  useEffect(() => {
+    localStorage.setItem(PREVIEW_KEY, String(previewEnabled));
+  }, [previewEnabled]);
 
   const currentSection = LIBRARY_SECTIONS.find((s) => s.id === activeSection);
   const hasSubsections = currentSection && currentSection.subsections.length > 0;
@@ -39,9 +52,16 @@ const LibraryPage = () => {
 
   return (
     <div className="space-y-6">
-      <h1 className="font-heading text-3xl font-semibold text-foreground">
-        Библиотека
-      </h1>
+      <div className="flex items-center justify-between">
+        <h1 className="font-heading text-3xl font-semibold text-foreground">
+          Библиотека
+        </h1>
+        <label className="flex items-center gap-2 cursor-pointer select-none">
+          <Eye className="h-4 w-4 text-muted-foreground" strokeWidth={1.5} />
+          <span className="text-sm text-muted-foreground">Превью</span>
+          <Switch checked={previewEnabled} onCheckedChange={setPreviewEnabled} />
+        </label>
+      </div>
 
       {/* Section tabs */}
       <div
@@ -112,7 +132,7 @@ const LibraryPage = () => {
       {/* Materials grid */}
       <div className="grid grid-cols-1 gap-5 md:grid-cols-2 lg:grid-cols-3">
         {filtered.map((material) => (
-          <MaterialCard key={material.id} material={material} />
+          <MaterialCard key={material.id} material={material} previewEnabled={previewEnabled} />
         ))}
       </div>
 
