@@ -1,11 +1,23 @@
-import { useParams, Link } from "react-router-dom";
+import { useState, useEffect } from "react";
+import { useParams, Link, useSearchParams, useNavigate } from "react-router-dom";
 import { ArrowLeft, Video, Headphones, Play } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { mockMaterials, LIBRARY_SECTIONS } from "@/lib/mock-data";
 
 const MaterialPage = () => {
   const { id } = useParams();
+  const [searchParams] = useSearchParams();
+  const navigate = useNavigate();
+  const isPreview = searchParams.get("preview") === "1";
   const material = mockMaterials.find((m) => m.id === id);
+  const [showOverlay, setShowOverlay] = useState(false);
+
+  useEffect(() => {
+    if (!isPreview) { setShowOverlay(false); return; }
+    const timer = setTimeout(() => setShowOverlay(true), 15000);
+    setShowOverlay(true); // show immediately with option to dismiss
+    return () => clearTimeout(timer);
+  }, [isPreview]);
 
   if (!material) {
     return (
@@ -33,7 +45,7 @@ const MaterialPage = () => {
       </Link>
 
       {/* Player */}
-      <div className="overflow-hidden rounded-lg bg-muted">
+      <div className="relative overflow-hidden rounded-lg bg-muted">
         {material.type === "video" && material.video_url ? (
           <div className="aspect-video">
             <iframe
@@ -55,6 +67,24 @@ const MaterialPage = () => {
               <p className="text-sm">
                 {material.type === "video" ? "Видео скоро будет доступно" : "Аудио плеер"}
               </p>
+            </div>
+          </div>
+        )}
+
+        {/* Preview overlay */}
+        {isPreview && showOverlay && (
+          <div className="absolute inset-0 flex flex-col items-center justify-end bg-gradient-to-t from-foreground/80 via-foreground/30 to-transparent p-6">
+            <div className="flex flex-col items-center gap-3 text-center">
+              <p className="text-sm font-medium text-primary-foreground">
+                Это превью — нажмите для полного просмотра
+              </p>
+              <Button
+                onClick={() => navigate(`/material/${id}`, { replace: true })}
+                className="gap-2"
+              >
+                <Play className="h-4 w-4" />
+                {material.type === "video" ? "Смотреть полностью" : "Слушать полностью"}
+              </Button>
             </div>
           </div>
         )}

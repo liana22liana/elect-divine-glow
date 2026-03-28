@@ -22,9 +22,10 @@ const SECTION_GRADIENTS: Record<string, string> = {
 
 interface MaterialCardProps {
   material: Material;
+  previewEnabled?: boolean;
 }
 
-const MaterialCard = ({ material }: MaterialCardProps) => {
+const MaterialCard = ({ material, previewEnabled = false }: MaterialCardProps) => {
   const section = LIBRARY_SECTIONS.find((s) => s.id === material.section_id);
   const locked = mockLockedContent.find((lc) => lc.content_id === material.id);
   const userStatusIdx = STATUS_ORDER.indexOf(mockUser.ambassador_status);
@@ -100,8 +101,12 @@ const MaterialCard = ({ material }: MaterialCardProps) => {
     );
   }
 
+  const linkTo = previewEnabled
+    ? `/material/${material.id}?preview=1`
+    : `/material/${material.id}`;
+
   return (
-    <Link to={`/material/${material.id}`}>
+    <Link to={linkTo}>
       {card}
     </Link>
   );
