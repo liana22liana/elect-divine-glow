@@ -63,7 +63,7 @@ const HomePage = () => {
               className="w-72 flex-shrink-0 snap-start animate-slide-up"
               style={{ animationDelay: `${0.1 + i * 0.05}s` }}
             >
-              <MaterialCard material={material} />
+              <MaterialCard material={material} previewEnabled={true} />
             </div>
           ))}
         </div>
