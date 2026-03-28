@@ -16,6 +16,16 @@ const categoryIcons: Record<string, React.ElementType> = {
   practices: Moon,
 };
 
+const CATEGORY_DOT_COLORS: Record<string, string> = {
+  money: "bg-amber-400",
+  relationships: "bg-rose-400",
+  reality: "bg-fuchsia-400",
+  mindset: "bg-violet-400",
+  experts: "bg-orange-400",
+  body: "bg-emerald-400",
+  practices: "bg-sky-400",
+};
+
 interface HabitCardProps {
   habit: Habit;
   logs: HabitLog[];
@@ -67,6 +77,7 @@ const HabitCard = ({ habit, logs, onMarkToday }: HabitCardProps) => {
   const markedToday = completedDates.has(today);
   const last28 = getLast28Days();
   const totalCompleted = logs.filter((l) => l.completed).length;
+  const dotColor = CATEGORY_DOT_COLORS[habit.category || "practices"] || "bg-primary";
 
   const frequencyLabel =
     habit.frequency_type === "daily"
@@ -81,7 +92,7 @@ const HabitCard = ({ habit, logs, onMarkToday }: HabitCardProps) => {
   };
 
   return (
-    <div className="rounded-2xl border border-border bg-card p-5 shadow-sm space-y-4">
+    <div className="rounded-2xl border border-border bg-card p-5 shadow-sm space-y-4 transition-all duration-200 hover:shadow-md hover:border-primary/20">
       <div className="flex items-start justify-between gap-3">
         <div className="flex items-center gap-3">
           <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-primary/10">
@@ -97,7 +108,7 @@ const HabitCard = ({ habit, logs, onMarkToday }: HabitCardProps) => {
           </div>
         </div>
         {streak > 0 && (
-          <div className="flex items-center gap-1 rounded-full bg-primary/10 px-3 py-1 text-sm font-medium text-primary">
+          <div className="flex items-center gap-1 rounded-full bg-primary/10 px-3 py-1 text-sm font-medium text-primary shadow-sm shadow-primary/20">
             <Flame className="h-4 w-4" />
             {streak}
           </div>
@@ -136,7 +147,7 @@ const HabitCard = ({ habit, logs, onMarkToday }: HabitCardProps) => {
                 key={date}
                 className={cn(
                   "h-5 w-5 rounded-full transition-colors mx-auto",
-                  completedDates.has(date) ? "bg-primary" : "bg-muted"
+                  completedDates.has(date) ? dotColor : "bg-muted"
                 )}
                 title={date}
               />

@@ -11,13 +11,12 @@ const LoginPage = () => {
 
   const handleLogin = (e: React.FormEvent) => {
     e.preventDefault();
-    // Mock login — will be replaced with Supabase auth
     navigate("/");
   };
 
   return (
     <div className="flex min-h-screen items-center justify-center bg-gradient-to-br from-background via-card to-muted px-4">
-      <div className="w-full max-w-sm space-y-8">
+      <div className="w-full max-w-sm space-y-8 animate-fade-in">
         <div className="text-center">
           <h1 className="font-heading text-4xl font-semibold tracking-wide text-foreground">
             ELECT
@@ -25,6 +24,7 @@ const LoginPage = () => {
           <p className="mt-1 text-sm tracking-widest text-muted-foreground">
             by Dasha Avilova
           </p>
+          <div className="mx-auto mt-3 h-px w-12 bg-primary/60 rounded-full" />
         </div>
 
         <form onSubmit={handleLogin} className="space-y-5">
@@ -38,7 +38,7 @@ const LoginPage = () => {
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               placeholder="your@email.com"
-              className="h-12 rounded-lg border-border bg-card/60 backdrop-blur-sm"
+              className="h-12 rounded-xl border-border bg-card/60 backdrop-blur-sm"
               required
             />
           </div>
@@ -52,13 +52,13 @@ const LoginPage = () => {
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               placeholder="••••••••"
-              className="h-12 rounded-lg border-border bg-card/60 backdrop-blur-sm"
+              className="h-12 rounded-xl border-border bg-card/60 backdrop-blur-sm"
               required
             />
           </div>
           <Button
             type="submit"
-            className="h-12 w-full rounded-lg text-base font-medium"
+            className="h-12 w-full rounded-xl text-base font-medium"
           >
             Войти
           </Button>

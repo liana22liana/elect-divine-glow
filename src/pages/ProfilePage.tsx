@@ -4,7 +4,7 @@ import { mockUser } from "@/lib/mock-data";
 import AmbassadorTimeline from "@/components/AmbassadorTimeline";
 
 const SUBSCRIPTION_LABELS: Record<string, { label: string; color: string }> = {
-  active: { label: "Активна", color: "bg-sky" },
+  active: { label: "Активна", color: "bg-secondary" },
   paused: { label: "Приостановлена", color: "bg-yellow-500" },
   cancelled: { label: "Отменена", color: "bg-destructive" },
 };
@@ -13,9 +13,9 @@ const ProfilePage = () => {
   const sub = SUBSCRIPTION_LABELS[mockUser.subscription_status] || SUBSCRIPTION_LABELS.active;
 
   return (
-    <div className="space-y-6 pb-24">
+    <div className="space-y-6 pb-24 animate-fade-in">
       {/* Header */}
-      <div className="rounded-lg border border-border bg-sky/[0.15] p-6 shadow-sm">
+      <div className="rounded-2xl border border-border bg-card p-6 shadow-sm">
         <div className="flex items-center gap-4">
           <div className="relative">
             <div className="flex h-20 w-20 items-center justify-center rounded-full bg-primary/10 overflow-hidden">
@@ -45,10 +45,10 @@ const ProfilePage = () => {
         </div>
       </div>
 
-      <div className="h-px bg-sky/20" />
+      <div className="h-px bg-border" />
 
       {/* Subscription */}
-      <div className="rounded-lg border border-border bg-card p-6 shadow-sm">
+      <div className="rounded-2xl border border-border bg-card p-6 shadow-sm">
         <h2 className="font-heading text-xl font-semibold text-foreground mb-4">
           Подписка
         </h2>
@@ -74,13 +74,13 @@ const ProfilePage = () => {
               Действует до: {new Date(mockUser.subscription_end_date).toLocaleDateString("ru-RU")}
             </p>
           )}
-          <Button variant="outline" className="h-10 gap-2 rounded-lg">
+          <Button variant="outline" className="h-10 gap-2 rounded-xl">
             Управление подпиской
           </Button>
         </div>
       </div>
 
-      <div className="h-px bg-sky/20" />
+      <div className="h-px bg-border" />
 
       {/* Ambassador */}
       <AmbassadorTimeline
@@ -89,12 +89,12 @@ const ProfilePage = () => {
         deliveryFormSubmitted={mockUser.delivery_form_submitted}
       />
 
-      <div className="h-px bg-sky/20" />
+      <div className="h-px bg-border" />
 
       {/* Logout */}
       <Button
         variant="outline"
-        className="h-12 w-full gap-2 rounded-lg text-muted-foreground"
+        className="h-12 w-full gap-2 rounded-xl text-muted-foreground"
       >
         <LogOut className="h-4 w-4" strokeWidth={1.5} />
         Выйти из аккаунта

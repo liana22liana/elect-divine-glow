@@ -26,14 +26,13 @@ const AmbassadorTimeline = ({ currentStatus, subscriptionStartDate, deliveryForm
   const today = new Date().toISOString().split("T")[0];
   const totalDays = daysBetween(subscriptionStartDate, today);
 
-  // Find next milestone for progress
   const nextMilestoneIdx = AMBASSADOR_MILESTONES.findIndex(
     (m) => getStatusIndex(m.status) > currentIndex
   );
 
   return (
     <>
-      <div className="rounded-lg border border-border bg-card p-6 shadow-sm">
+      <div className="rounded-2xl border border-border bg-card p-6 shadow-sm">
         <h2 className="font-heading text-xl font-semibold text-foreground mb-6">
           Путь амбассадора
         </h2>
@@ -41,10 +40,9 @@ const AmbassadorTimeline = ({ currentStatus, subscriptionStartDate, deliveryForm
         {/* Desktop: horizontal */}
         <div className="hidden md:block">
           <div className="relative flex items-start justify-between">
-            {/* Connecting line */}
-            <div className="absolute top-5 left-[10%] right-[10%] h-0.5 bg-sky/30" />
+            <div className="absolute top-5 left-[10%] right-[10%] h-0.5 bg-border" />
             <div
-              className="absolute top-5 left-[10%] h-0.5 bg-sky transition-all duration-700"
+              className="absolute top-5 left-[10%] h-0.5 bg-primary transition-all duration-700"
               style={{
                 width: currentIndex >= AMBASSADOR_MILESTONES.length
                   ? "80%"
@@ -58,12 +56,10 @@ const AmbassadorTimeline = ({ currentStatus, subscriptionStartDate, deliveryForm
               const isCurrent = milestoneStatusIdx === currentIndex;
               const isFuture = milestoneStatusIdx > currentIndex;
 
-              // Progress to next
               let progressText = "";
               if (isCurrent && nextMilestoneIdx >= 0) {
                 const nextM = AMBASSADOR_MILESTONES[nextMilestoneIdx];
                 const targetDays = nextM.months * 30;
-                const remaining = Math.max(0, targetDays - totalDays);
                 progressText = `${totalDays} из ${targetDays} дней`;
               }
 
@@ -143,7 +139,7 @@ const AmbassadorTimeline = ({ currentStatus, subscriptionStartDate, deliveryForm
                   {!isLast && (
                     <div className={cn(
                       "w-0.5 flex-1 min-h-[2rem]",
-                      isAchieved && !isCurrent ? "bg-sky" : "bg-sky/30"
+                      isAchieved && !isCurrent ? "bg-primary" : "bg-border"
                     )} />
                   )}
                 </div>
