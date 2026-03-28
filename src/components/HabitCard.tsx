@@ -17,13 +17,13 @@ const categoryIcons: Record<string, React.ElementType> = {
 };
 
 const CATEGORY_DOT_COLORS: Record<string, string> = {
-  money: "bg-amber-400",
-  relationships: "bg-rose-400",
-  reality: "bg-fuchsia-400",
-  mindset: "bg-violet-400",
-  experts: "bg-orange-400",
-  body: "bg-emerald-400",
-  practices: "bg-sky-400",
+  money: "bg-primary",
+  relationships: "bg-primary",
+  reality: "bg-primary",
+  mindset: "bg-primary",
+  experts: "bg-primary",
+  body: "bg-primary",
+  practices: "bg-primary",
 };
 
 interface HabitCardProps {
