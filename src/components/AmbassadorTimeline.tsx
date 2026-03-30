@@ -94,20 +94,6 @@ const AmbassadorTimeline = ({ currentStatus, subscriptionStartDate, deliveryForm
           Путь амбассадора
         </h2>
 
-        {/* Countdown to next status */}
-        {nextMilestoneIdx >= 0 && (() => {
-          const nextM = AMBASSADOR_MILESTONES[nextMilestoneIdx];
-          const targetDays = TARGET_DAYS[nextMilestoneIdx];
-          const remaining = Math.max(0, targetDays - totalDays);
-          if (remaining > 0) {
-            return (
-              <p className="text-center text-sm text-primary mb-4">
-                До статуса {nextM.label}: {remaining} дней
-              </p>
-            );
-          }
-          return null;
-        })()}
 
         {/* Desktop: horizontal */}
         <div className="hidden md:block">
@@ -131,7 +117,7 @@ const AmbassadorTimeline = ({ currentStatus, subscriptionStartDate, deliveryForm
                 const targetDays = TARGET_DAYS[idx];
                 const displayDays = Math.min(totalDays, targetDays);
                 if (totalDays < targetDays) {
-                  progressText = `${displayDays} дней из ${targetDays}`;
+                  progressText = `${displayDays} из ${targetDays} дней`;
                 }
               }
 
@@ -187,7 +173,7 @@ const AmbassadorTimeline = ({ currentStatus, subscriptionStartDate, deliveryForm
               const targetDays = TARGET_DAYS[idx];
               const displayDays = Math.min(totalDays, targetDays);
               if (totalDays < targetDays) {
-                progressText = `${displayDays} дней из ${targetDays}`;
+                progressText = `${displayDays} из ${targetDays} дней`;
               }
             }
 
