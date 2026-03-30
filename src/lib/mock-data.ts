@@ -273,7 +273,7 @@ export const mockUser: UserProfile = {
   created_at: "2025-01-15",
   subscription_active: true,
   subscription_status: "active",
-  subscription_start_date: "2025-01-15",
+  subscription_start_date: "2025-12-26",
   subscription_end_date: null,
   ambassador_status: "becoming",
   ambassador_status_override: false,
