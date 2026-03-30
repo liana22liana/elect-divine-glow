@@ -11,6 +11,7 @@ interface AmbassadorTimelineProps {
 }
 
 const STATUS_ORDER: (AmbassadorStatus | null)[] = [null, "rising", "becoming", "transformed", "reborn"];
+const TARGET_DAYS = [60, 90, 180, 365];
 
 function getStatusIndex(status: AmbassadorStatus | null): number {
   return STATUS_ORDER.indexOf(status);
@@ -24,11 +25,67 @@ const AmbassadorTimeline = ({ currentStatus, subscriptionStartDate, deliveryForm
   const [selectedMilestone, setSelectedMilestone] = useState<number | null>(null);
   const currentIndex = getStatusIndex(currentStatus);
   const today = new Date().toISOString().split("T")[0];
-  const totalDays = daysBetween(subscriptionStartDate, today);
+  const totalDays = Math.max(0, daysBetween(subscriptionStartDate, today));
 
   const nextMilestoneIdx = AMBASSADOR_MILESTONES.findIndex(
     (m) => getStatusIndex(m.status) > currentIndex
   );
+
+  // Calculate desktop progress bar width as percentage of 80% track
+  const calcDesktopProgressWidth = () => {
+    const segments = AMBASSADOR_MILESTONES.length - 1; // 3 segments between 4 nodes
+    if (segments <= 0) return 0;
+    const segmentWidth = 80 / segments;
+
+    if (nextMilestoneIdx === -1) return 80; // all achieved
+
+    // Fully completed segments
+    const completedSegments = nextMilestoneIdx > 0 ? nextMilestoneIdx - 1 : 0;
+    // But we need segments where BOTH endpoints are achieved
+    // Actually: achieved milestones count = number of milestones with statusIdx <= currentIndex
+    // The first achieved-to-next segment needs partial fill
+    
+    // Count achieved milestones (0-indexed)
+    let achievedCount = 0;
+    for (let i = 0; i < AMBASSADOR_MILESTONES.length; i++) {
+      if (getStatusIndex(AMBASSADOR_MILESTONES[i].status) <= currentIndex) {
+        achievedCount = i + 1;
+      }
+    }
+
+    // Full segments = achievedCount - 1 (segments between achieved nodes)
+    const fullSegments = Math.max(0, achievedCount - 1);
+    
+    // Partial segment: from last achieved to next milestone
+    let partialFraction = 0;
+    if (nextMilestoneIdx >= 0 && nextMilestoneIdx < AMBASSADOR_MILESTONES.length) {
+      const targetDays = TARGET_DAYS[nextMilestoneIdx];
+      const prevTargetDays = nextMilestoneIdx > 0 ? TARGET_DAYS[nextMilestoneIdx - 1] : 0;
+      const daysInSegment = targetDays - prevTargetDays;
+      const daysProgress = totalDays - prevTargetDays;
+      partialFraction = Math.max(0, Math.min(1, daysProgress / daysInSegment));
+    }
+
+    return (fullSegments + partialFraction) * segmentWidth;
+  };
+
+  // Calculate mobile segment fill percentage between idx and idx+1
+  const calcMobileSegmentFill = (idx: number): number => {
+    const thisAchieved = getStatusIndex(AMBASSADOR_MILESTONES[idx].status) <= currentIndex;
+    const nextAchieved = idx + 1 < AMBASSADOR_MILESTONES.length && getStatusIndex(AMBASSADOR_MILESTONES[idx + 1].status) <= currentIndex;
+
+    if (thisAchieved && nextAchieved) return 100;
+    if (!thisAchieved) return 0;
+
+    // This is achieved but next is not — partial fill
+    const targetDays = TARGET_DAYS[idx + 1];
+    const prevTargetDays = TARGET_DAYS[idx];
+    const daysInSegment = targetDays - prevTargetDays;
+    const daysProgress = totalDays - prevTargetDays;
+    return Math.max(0, Math.min(100, (daysProgress / daysInSegment) * 100));
+  };
+
+  const desktopProgressWidth = calcDesktopProgressWidth();
 
   return (
     <>
@@ -40,27 +97,26 @@ const AmbassadorTimeline = ({ currentStatus, subscriptionStartDate, deliveryForm
         {/* Desktop: horizontal */}
         <div className="hidden md:block">
           <div className="relative flex items-start justify-between">
+            {/* Background track */}
             <div className="absolute top-5 left-[10%] right-[10%] h-0.5 bg-border" />
+            {/* Filled progress */}
             <div
               className="absolute top-5 left-[10%] h-0.5 bg-primary transition-all duration-700"
-              style={{
-                width: currentIndex >= AMBASSADOR_MILESTONES.length
-                  ? "80%"
-                  : `${Math.min(80, (currentIndex / (AMBASSADOR_MILESTONES.length - 1)) * 80)}%`,
-              }}
+              style={{ width: `${desktopProgressWidth}%` }}
             />
 
             {AMBASSADOR_MILESTONES.map((milestone, idx) => {
               const milestoneStatusIdx = getStatusIndex(milestone.status);
               const isAchieved = milestoneStatusIdx <= currentIndex;
-              const isCurrent = milestoneStatusIdx === currentIndex;
               const isFuture = milestoneStatusIdx > currentIndex;
+              const isNext = idx === nextMilestoneIdx;
 
               let progressText = "";
-              if (isFuture && idx === nextMilestoneIdx) {
-                const targetDays = milestone.months * 30;
+              if (isNext) {
+                const targetDays = TARGET_DAYS[idx];
+                const displayDays = Math.min(totalDays, targetDays);
                 if (totalDays < targetDays) {
-                  progressText = `${totalDays} из ${targetDays} дней`;
+                  progressText = `${displayDays} дней из ${targetDays}`;
                 }
               }
 
@@ -72,8 +128,8 @@ const AmbassadorTimeline = ({ currentStatus, subscriptionStartDate, deliveryForm
                     className={cn(
                       "flex h-10 w-10 items-center justify-center rounded-full border-2 transition-all",
                       isAchieved && "border-primary bg-primary text-primary-foreground cursor-pointer hover:scale-110",
-                      isCurrent && "animate-pulse border-primary bg-primary text-primary-foreground",
-                      isFuture && "border-border bg-muted text-muted-foreground cursor-not-allowed opacity-50"
+                      isNext && "animate-pulse border-primary bg-primary/20 text-primary",
+                      isFuture && !isNext && "border-border bg-muted text-muted-foreground cursor-not-allowed opacity-50"
                     )}
                   >
                     {isAchieved ? (
@@ -107,17 +163,20 @@ const AmbassadorTimeline = ({ currentStatus, subscriptionStartDate, deliveryForm
           {AMBASSADOR_MILESTONES.map((milestone, idx) => {
             const milestoneStatusIdx = getStatusIndex(milestone.status);
             const isAchieved = milestoneStatusIdx <= currentIndex;
-            const isCurrent = milestoneStatusIdx === currentIndex;
             const isFuture = milestoneStatusIdx > currentIndex;
+            const isNext = idx === nextMilestoneIdx;
             const isLast = idx === AMBASSADOR_MILESTONES.length - 1;
 
             let progressText = "";
-            if (isFuture && idx === nextMilestoneIdx) {
-              const targetDays = milestone.months * 30;
+            if (isNext) {
+              const targetDays = TARGET_DAYS[idx];
+              const displayDays = Math.min(totalDays, targetDays);
               if (totalDays < targetDays) {
-                progressText = `${totalDays} из ${targetDays} дней`;
+                progressText = `${displayDays} дней из ${targetDays}`;
               }
             }
+
+            const segmentFill = !isLast ? calcMobileSegmentFill(idx) : 0;
 
             return (
               <div key={milestone.status} className="flex gap-3">
@@ -128,8 +187,8 @@ const AmbassadorTimeline = ({ currentStatus, subscriptionStartDate, deliveryForm
                     className={cn(
                       "flex h-9 w-9 items-center justify-center rounded-full border-2 transition-all flex-shrink-0",
                       isAchieved && "border-primary bg-primary text-primary-foreground cursor-pointer",
-                      isCurrent && "animate-pulse border-primary bg-primary text-primary-foreground",
-                      isFuture && "border-border bg-muted text-muted-foreground cursor-not-allowed opacity-50"
+                      isNext && "animate-pulse border-primary bg-primary/20 text-primary",
+                      isFuture && !isNext && "border-border bg-muted text-muted-foreground cursor-not-allowed opacity-50"
                     )}
                   >
                     {isAchieved ? (
@@ -139,10 +198,12 @@ const AmbassadorTimeline = ({ currentStatus, subscriptionStartDate, deliveryForm
                     )}
                   </button>
                   {!isLast && (
-                    <div className={cn(
-                      "w-0.5 flex-1 min-h-[2rem]",
-                      isAchieved && !isCurrent ? "bg-primary" : "bg-border"
-                    )} />
+                    <div className="relative w-0.5 flex-1 min-h-[2rem] bg-border overflow-hidden">
+                      <div
+                        className="absolute top-0 left-0 w-full bg-primary transition-all duration-500"
+                        style={{ height: `${segmentFill}%` }}
+                      />
+                    </div>
                   )}
                 </div>
                 <div className="pb-6 pt-1">
