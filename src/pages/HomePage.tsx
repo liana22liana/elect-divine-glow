@@ -25,7 +25,7 @@ const HomePage = () => {
     <div className="space-y-10 animate-fade-in">
       <div>
         <h1 className="font-heading text-3xl font-semibold text-foreground lg:text-4xl">
-          Добро пожаловать, {mockUser.name}
+          Добро пожаловать, Избранная Женщина
         </h1>
         <p className="mt-1 text-sm text-muted-foreground">
           Рада видеть тебя в клубе ✨
