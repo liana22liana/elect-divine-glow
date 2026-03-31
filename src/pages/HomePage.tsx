@@ -2,7 +2,7 @@ import { useRef } from "react";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import MaterialCard from "@/components/MaterialCard";
 import CategoryCard from "@/components/CategoryCard";
-import { mockMaterials, mockUser, LIBRARY_SECTIONS } from "@/lib/mock-data";
+import { mockMaterials, LIBRARY_SECTIONS } from "@/lib/mock-data";
 
 const HomePage = () => {
   const scrollRef = useRef<HTMLDivElement>(null);
