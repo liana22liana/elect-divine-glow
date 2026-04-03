@@ -1,7 +1,8 @@
 import { Home, BookOpen, Target, User, LogOut, Shield } from "lucide-react";
-import { NavLink } from "react-router-dom";
+import { NavLink, useNavigate } from "react-router-dom";
 import { cn } from "@/lib/utils";
 import { mockUser } from "@/lib/mock-data";
+import { useAuth } from "@/contexts/AuthContext";
 
 const navItems = [
   { to: "/", icon: Home, label: "Главная" },

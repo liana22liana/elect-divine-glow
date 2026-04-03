@@ -1,6 +1,8 @@
 import { LogOut, Camera, Send, User } from "lucide-react";
+import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { mockUser } from "@/lib/mock-data";
+import { useAuth } from "@/contexts/AuthContext";
 import AmbassadorTimeline from "@/components/AmbassadorTimeline";
 
 const SUBSCRIPTION_LABELS: Record<string, { label: string; color: string }> = {
