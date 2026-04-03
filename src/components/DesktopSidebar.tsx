@@ -13,6 +13,14 @@ const navItems = [
 ];
 
 const DesktopSidebar = () => {
+  const { logout } = useAuth();
+  const navigate = useNavigate();
+
+  const handleLogout = () => {
+    logout();
+    navigate("/login");
+  };
+
   return (
     <aside className="fixed left-0 top-0 hidden h-screen w-64 flex-col border-r border-border bg-sidebar backdrop-blur-md lg:flex">
       <div className="flex flex-col items-center gap-1 px-6 py-8">
