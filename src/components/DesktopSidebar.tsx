@@ -1,7 +1,6 @@
 import { Home, BookOpen, Target, User, LogOut, Shield } from "lucide-react";
 import { NavLink, useNavigate } from "react-router-dom";
 import { cn } from "@/lib/utils";
-import { mockUser } from "@/lib/mock-data";
 import { useAuth } from "@/contexts/AuthContext";
 
 const navItems = [
@@ -13,7 +12,7 @@ const navItems = [
 ];
 
 const DesktopSidebar = () => {
-  const { logout } = useAuth();
+  const { logout, user } = useAuth();
   const navigate = useNavigate();
 
   const handleLogout = () => {
@@ -57,13 +56,13 @@ const DesktopSidebar = () => {
       <div className="border-t border-border px-4 py-4">
         <div className="flex items-center gap-3 px-4 py-2 mb-2">
           <div className="flex h-8 w-8 items-center justify-center rounded-full bg-primary/10 overflow-hidden">
-            {mockUser.avatar_url ? (
-              <img src={mockUser.avatar_url} alt="" className="h-full w-full object-cover" />
+            {user?.avatar_url ? (
+              <img src={user.avatar_url} alt="" className="h-full w-full object-cover" />
             ) : (
               <User className="h-4 w-4 text-primary" strokeWidth={1.5} />
             )}
           </div>
-          <span className="text-sm font-body text-foreground truncate">{mockUser.name}</span>
+          <span className="text-sm font-body text-foreground truncate">{user?.name || "Пользователь"}</span>
         </div>
         <button
           onClick={handleLogout}

@@ -1,30 +1,35 @@
 import { useState, useEffect } from "react";
 import { useSearchParams } from "react-router-dom";
 import MaterialCard from "@/components/MaterialCard";
-import { mockMaterials, LIBRARY_SECTIONS, mockUser } from "@/lib/mock-data";
+import { Skeleton } from "@/components/ui/skeleton";
 import { cn } from "@/lib/utils";
 import { Switch } from "@/components/ui/switch";
 import { Eye } from "lucide-react";
-
-const PREVIEW_KEY = `preview_${mockUser.id}`;
+import { useMaterials, useSections } from "@/hooks/useApiData";
+import { useAuth } from "@/contexts/AuthContext";
 
 const LibraryPage = () => {
   const [searchParams, setSearchParams] = useSearchParams();
   const activeSection = searchParams.get("section") || "all";
   const activeSub = searchParams.get("sub") || "all";
+  const { user } = useAuth();
 
+  const PREVIEW_KEY = `preview_${user?.id || "anon"}`;
   const [previewEnabled, setPreviewEnabled] = useState(() => {
     return localStorage.getItem(PREVIEW_KEY) === "true";
   });
 
   useEffect(() => {
     localStorage.setItem(PREVIEW_KEY, String(previewEnabled));
-  }, [previewEnabled]);
+  }, [previewEnabled, PREVIEW_KEY]);
 
-  const currentSection = LIBRARY_SECTIONS.find((s) => s.id === activeSection);
+  const { data: sections = [], isLoading: loadingSec } = useSections();
+  const { data: materials = [], isLoading: loadingMat } = useMaterials();
+
+  const currentSection = sections.find((s) => s.id === activeSection);
   const hasSubsections = currentSection && currentSection.subsections.length > 0;
 
-  const filtered = mockMaterials.filter((m) => {
+  const filtered = materials.filter((m) => {
     if (!m.is_published) return false;
     if (activeSection === "all") return true;
     if (m.section_id !== activeSection) return false;
@@ -79,20 +84,22 @@ const LibraryPage = () => {
         >
           Все
         </button>
-        {LIBRARY_SECTIONS.map((sec) => (
-          <button
-            key={sec.id}
-            onClick={() => setSection(sec.id)}
-            className={cn(
-              "flex-shrink-0 whitespace-nowrap rounded-full px-4 py-2 text-sm font-medium transition-colors",
-              activeSection === sec.id
-                ? "bg-primary text-primary-foreground"
-                : "border border-border bg-card text-muted-foreground hover:bg-muted"
-            )}
-          >
-            {sec.name}
-          </button>
-        ))}
+        {loadingSec
+          ? Array.from({ length: 4 }).map((_, i) => <Skeleton key={i} className="h-9 w-24 rounded-full" />)
+          : sections.map((sec) => (
+              <button
+                key={sec.id}
+                onClick={() => setSection(sec.id)}
+                className={cn(
+                  "flex-shrink-0 whitespace-nowrap rounded-full px-4 py-2 text-sm font-medium transition-colors",
+                  activeSection === sec.id
+                    ? "bg-primary text-primary-foreground"
+                    : "border border-border bg-card text-muted-foreground hover:bg-muted"
+                )}
+              >
+                {sec.name}
+              </button>
+            ))}
       </div>
 
       {/* Subsection tabs */}
@@ -130,13 +137,21 @@ const LibraryPage = () => {
       )}
 
       {/* Materials grid */}
-      <div className={previewEnabled ? "grid grid-cols-1 gap-5 md:grid-cols-2 lg:grid-cols-3" : "flex flex-col gap-3"}>
-        {filtered.map((material) => (
-          <MaterialCard key={material.id} material={material} previewEnabled={previewEnabled} />
-        ))}
-      </div>
+      {loadingMat ? (
+        <div className="grid grid-cols-1 gap-5 md:grid-cols-2 lg:grid-cols-3">
+          {Array.from({ length: 6 }).map((_, i) => (
+            <Skeleton key={i} className="h-48 w-full rounded-2xl" />
+          ))}
+        </div>
+      ) : (
+        <div className={previewEnabled ? "grid grid-cols-1 gap-5 md:grid-cols-2 lg:grid-cols-3" : "flex flex-col gap-3"}>
+          {filtered.map((material) => (
+            <MaterialCard key={material.id} material={material} previewEnabled={previewEnabled} />
+          ))}
+        </div>
+      )}
 
-      {filtered.length === 0 && (
+      {!loadingMat && filtered.length === 0 && (
         <div className="py-16 text-center">
           <p className="text-muted-foreground">
             В этом разделе пока нет материалов

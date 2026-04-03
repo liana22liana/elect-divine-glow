@@ -6,7 +6,7 @@ import { Label } from "@/components/ui/label";
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription,
 } from "@/components/ui/dialog";
-import { type AmbassadorMilestone } from "@/lib/mock-data";
+import { type AmbassadorMilestone } from "@/lib/types";
 import { toast } from "@/hooks/use-toast";
 
 interface AmbassadorCongratDialogProps {

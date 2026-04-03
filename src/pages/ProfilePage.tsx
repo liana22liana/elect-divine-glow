@@ -1,8 +1,9 @@
 import { LogOut, Camera, Send, User } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
-import { mockUser } from "@/lib/mock-data";
+import { Skeleton } from "@/components/ui/skeleton";
 import { useAuth } from "@/contexts/AuthContext";
+import { useProfile } from "@/hooks/useApiData";
 import AmbassadorTimeline from "@/components/AmbassadorTimeline";
 
 const SUBSCRIPTION_LABELS: Record<string, { label: string; color: string }> = {
@@ -14,22 +15,33 @@ const SUBSCRIPTION_LABELS: Record<string, { label: string; color: string }> = {
 const ProfilePage = () => {
   const { logout } = useAuth();
   const navigate = useNavigate();
-  const sub = SUBSCRIPTION_LABELS[mockUser.subscription_status] || SUBSCRIPTION_LABELS.active;
+  const { data: profile, isLoading } = useProfile();
 
   const handleLogout = () => {
     logout();
     navigate("/login");
   };
 
+  if (isLoading || !profile) {
+    return (
+      <div className="space-y-6 pb-24">
+        <Skeleton className="h-32 w-full rounded-2xl" />
+        <Skeleton className="h-40 w-full rounded-2xl" />
+        <Skeleton className="h-48 w-full rounded-2xl" />
+      </div>
+    );
+  }
+
+  const sub = SUBSCRIPTION_LABELS[profile.subscription_status] || SUBSCRIPTION_LABELS.active;
+
   return (
     <div className="space-y-6 pb-24 animate-fade-in">
-      {/* Header */}
       <div className="rounded-2xl border border-border bg-card p-6 shadow-sm">
         <div className="flex items-center gap-4">
           <div className="relative">
             <div className="flex h-20 w-20 items-center justify-center rounded-full bg-primary/10 overflow-hidden">
-              {mockUser.avatar_url ? (
-                <img src={mockUser.avatar_url} alt="" className="h-full w-full object-cover" />
+              {profile.avatar_url ? (
+                <img src={profile.avatar_url} alt="" className="h-full w-full object-cover" />
               ) : (
                 <User className="h-10 w-10 text-primary" strokeWidth={1.5} />
               )}
@@ -40,11 +52,11 @@ const ProfilePage = () => {
           </div>
           <div>
             <h1 className="font-heading text-2xl font-semibold text-foreground">
-              {mockUser.name}
+              {profile.name}
             </h1>
             <p className="text-sm text-muted-foreground">
               В клубе с{" "}
-              {new Date(mockUser.created_at).toLocaleDateString("ru-RU", {
+              {new Date(profile.created_at).toLocaleDateString("ru-RU", {
                 day: "numeric",
                 month: "long",
                 year: "numeric",
@@ -56,7 +68,6 @@ const ProfilePage = () => {
 
       <div className="h-px bg-border" />
 
-      {/* Subscription */}
       <div className="rounded-2xl border border-border bg-card p-6 shadow-sm">
         <h2 className="font-heading text-xl font-semibold text-foreground mb-4">
           Подписка
@@ -66,21 +77,21 @@ const ProfilePage = () => {
             <div className={`h-2.5 w-2.5 rounded-full ${sub.color}`} />
             <span className="text-sm text-foreground">{sub.label}</span>
           </div>
-          {mockUser.subscription_status === "active" && (
+          {profile.subscription_status === "active" && (
             <p className="text-sm text-muted-foreground">
               Следующее списание:{" "}
               {new Date(
-                new Date(mockUser.subscription_start_date).setMonth(
-                  new Date(mockUser.subscription_start_date).getMonth() + Math.ceil(
-                    (new Date().getTime() - new Date(mockUser.subscription_start_date).getTime()) / (30 * 24 * 60 * 60 * 1000)
+                new Date(profile.subscription_start_date).setMonth(
+                  new Date(profile.subscription_start_date).getMonth() + Math.ceil(
+                    (new Date().getTime() - new Date(profile.subscription_start_date).getTime()) / (30 * 24 * 60 * 60 * 1000)
                   )
                 )
               ).toLocaleDateString("ru-RU")}
             </p>
           )}
-          {mockUser.subscription_end_date && (
+          {profile.subscription_end_date && (
             <p className="text-sm text-muted-foreground">
-              Действует до: {new Date(mockUser.subscription_end_date).toLocaleDateString("ru-RU")}
+              Действует до: {new Date(profile.subscription_end_date).toLocaleDateString("ru-RU")}
             </p>
           )}
           <Button variant="outline" className="h-10 gap-2 rounded-xl">
@@ -91,16 +102,14 @@ const ProfilePage = () => {
 
       <div className="h-px bg-border" />
 
-      {/* Ambassador */}
       <AmbassadorTimeline
-        currentStatus={mockUser.ambassador_status}
-        subscriptionStartDate={mockUser.subscription_start_date}
-        deliveryFormSubmitted={mockUser.delivery_form_submitted}
+        currentStatus={profile.ambassador_status}
+        subscriptionStartDate={profile.subscription_start_date}
+        deliveryFormSubmitted={profile.delivery_form_submitted}
       />
 
       <div className="h-px bg-border" />
 
-      {/* Logout */}
       <Button
         variant="outline"
         className="h-12 w-full gap-2 rounded-xl text-muted-foreground"
@@ -110,7 +119,6 @@ const ProfilePage = () => {
         Выйти из аккаунта
       </Button>
 
-      {/* Support button - fixed */}
       <a
         href="https://t.me/daavilovahelp"
         target="_blank"

@@ -1,9 +1,9 @@
 import { Video, Headphones, Lock } from "lucide-react";
 import { Link } from "react-router-dom";
-import {
-  LIBRARY_SECTIONS, mockLockedContent, mockUser, AMBASSADOR_MILESTONES,
-  type Material,
-} from "@/lib/mock-data";
+import { AMBASSADOR_MILESTONES } from "@/lib/types";
+import type { Material } from "@/lib/types";
+import { useSections } from "@/hooks/useApiData";
+import { useAuth } from "@/contexts/AuthContext";
 import {
   Tooltip, TooltipContent, TooltipProvider, TooltipTrigger,
 } from "@/components/ui/tooltip";
@@ -26,14 +26,13 @@ interface MaterialCardProps {
 }
 
 const MaterialCard = ({ material, previewEnabled = false }: MaterialCardProps) => {
-  const section = LIBRARY_SECTIONS.find((s) => s.id === material.section_id);
-  const locked = mockLockedContent.find((lc) => lc.content_id === material.id);
-  const userStatusIdx = STATUS_ORDER.indexOf(mockUser.ambassador_status);
-  const requiredIdx = locked ? STATUS_ORDER.indexOf(locked.required_status) : -1;
-  const isLocked = locked && requiredIdx > userStatusIdx;
-  const requiredLabel = isLocked
-    ? AMBASSADOR_MILESTONES.find((m) => m.status === locked.required_status)?.label
-    : null;
+  const { data: sections = [] } = useSections();
+  const { user } = useAuth();
+  const section = sections.find((s) => s.id === material.section_id);
+  
+  // For now, locked content check is simplified (no mock data)
+  const isLocked = false;
+  const requiredLabel: string | null = null;
 
   const gradient = SECTION_GRADIENTS[material.section_id] || SECTION_GRADIENTS.practices;
 
@@ -41,7 +40,6 @@ const MaterialCard = ({ material, previewEnabled = false }: MaterialCardProps) =
     ? `/material/${material.id}?preview=1`
     : `/material/${material.id}`;
 
-  // Compact list row (when preview is OFF)
   if (!previewEnabled) {
     const listRow = (
       <div className="group flex items-center gap-3 rounded-xl border border-border bg-card px-4 py-3 transition-all hover:shadow-sm hover:border-primary/20">
@@ -87,7 +85,6 @@ const MaterialCard = ({ material, previewEnabled = false }: MaterialCardProps) =
     return <Link to={`/material/${material.id}`}>{listRow}</Link>;
   }
 
-  // Grid card (when preview is ON)
   const card = (
     <div className="group relative block overflow-hidden rounded-2xl border border-border bg-card shadow-sm transition-all duration-200 hover:shadow-md hover:border-primary/20">
       <div className={`relative aspect-video bg-gradient-to-br ${gradient}`}>

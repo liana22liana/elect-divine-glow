@@ -2,28 +2,31 @@ import { useState } from "react";
 import { Plus, Target } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
+import { Skeleton } from "@/components/ui/skeleton";
 import HabitCard from "@/components/HabitCard";
 import AddHabitDialog from "@/components/AddHabitDialog";
-import { mockHabits, mockHabitLogs, type HabitLog } from "@/lib/mock-data";
+import { useHabits, useAllHabitLogs, useMarkHabitLog } from "@/hooks/useApiData";
+import type { HabitLog } from "@/lib/types";
 
 const GoalsPage = () => {
-  const [logs, setLogs] = useState<HabitLog[]>(mockHabitLogs);
   const [dialogOpen, setDialogOpen] = useState(false);
+  const { data: habits = [], isLoading: loadingHabits } = useHabits();
+  const habitIds = habits.map((h) => h.id);
+  const { data: logs = [], isLoading: loadingLogs } = useAllHabitLogs(habitIds);
+  const markLog = useMarkHabitLog();
 
   const today = new Date();
   const currentMonth = today.getMonth();
   const currentYear = today.getFullYear();
 
-  // Monthly progress
   const monthLogs = logs.filter((l) => {
     const d = new Date(l.date);
     return d.getMonth() === currentMonth && d.getFullYear() === currentYear && l.completed;
   });
 
-  // Expected completions this month (rough estimate)
   const daysInMonth = new Date(currentYear, currentMonth + 1, 0).getDate();
   const daysPassed = today.getDate();
-  const expectedTotal = mockHabits.reduce((sum, h) => {
+  const expectedTotal = habits.reduce((sum, h) => {
     if (h.frequency_type === "daily") return sum + daysPassed;
     return sum + Math.ceil((daysPassed / 7) * h.frequency_count);
   }, 0);
@@ -32,15 +35,13 @@ const GoalsPage = () => {
 
   const handleMarkToday = (habitId: string) => {
     const todayStr = today.toISOString().split("T")[0];
-    setLogs((prev) => [
-      ...prev,
-      { id: `new-${Date.now()}`, habit_id: habitId, date: todayStr, completed: true },
-    ]);
+    markLog.mutate({ habitId, date: todayStr });
   };
+
+  const loading = loadingHabits || loadingLogs;
 
   return (
     <div className="space-y-6">
-      {/* Header */}
       <div className="flex items-center justify-between">
         <div>
           <h1 className="font-heading text-3xl font-semibold text-foreground">
@@ -59,7 +60,6 @@ const GoalsPage = () => {
         </Button>
       </div>
 
-      {/* Monthly progress */}
       <div className="rounded-2xl border border-border bg-card p-5 space-y-3">
         <div className="flex items-center gap-3">
           <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-primary/10">
@@ -80,17 +80,24 @@ const GoalsPage = () => {
         <Progress value={progressPercent} className="h-2.5" />
       </div>
 
-      {/* Habits */}
-      <div className="grid gap-4 sm:grid-cols-2">
-        {mockHabits.map((habit) => (
-          <HabitCard
-            key={habit.id}
-            habit={habit}
-            logs={logs.filter((l) => l.habit_id === habit.id)}
-            onMarkToday={handleMarkToday}
-          />
-        ))}
-      </div>
+      {loading ? (
+        <div className="grid gap-4 sm:grid-cols-2">
+          {Array.from({ length: 3 }).map((_, i) => (
+            <Skeleton key={i} className="h-52 w-full rounded-2xl" />
+          ))}
+        </div>
+      ) : (
+        <div className="grid gap-4 sm:grid-cols-2">
+          {habits.map((habit) => (
+            <HabitCard
+              key={habit.id}
+              habit={habit}
+              logs={logs.filter((l) => l.habit_id === habit.id)}
+              onMarkToday={handleMarkToday}
+            />
+          ))}
+        </div>
+      )}
 
       <AddHabitDialog open={dialogOpen} onOpenChange={setDialogOpen} />
     </div>
