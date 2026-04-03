@@ -3,12 +3,11 @@ import { NavLink, useNavigate } from "react-router-dom";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/contexts/AuthContext";
 
-const navItems = [
+const baseNavItems = [
   { to: "/", icon: Home, label: "Главная" },
   { to: "/library", icon: BookOpen, label: "Библиотека" },
   { to: "/goals", icon: Target, label: "Привычки" },
   { to: "/profile", icon: User, label: "Профиль" },
-  { to: "/admin", icon: Shield, label: "Админ" },
 ];
 
 const DesktopSidebar = () => {
@@ -33,7 +32,7 @@ const DesktopSidebar = () => {
       </div>
 
       <nav className="flex flex-1 flex-col gap-1 px-4">
-        {navItems.map(({ to, icon: Icon, label }) => (
+        {[...baseNavItems, ...(user?.role === "admin" || user?.role === "superadmin" ? [{ to: "/admin", icon: Shield, label: "Админ" }] : [])].map(({ to, icon: Icon, label }) => (
           <NavLink
             key={to}
             to={to}

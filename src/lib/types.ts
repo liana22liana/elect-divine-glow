@@ -41,6 +41,9 @@ export interface Material {
 export type SubscriptionStatus = "active" | "paused" | "cancelled";
 export type AmbassadorStatus = "rising" | "becoming" | "transformed" | "reborn";
 
+export type AdminTabId = "materials" | "structure" | "users" | "recommendations";
+export type UserRole = "user" | "admin" | "superadmin";
+
 export interface UserProfile {
   id: string;
   email: string;
@@ -54,6 +57,8 @@ export interface UserProfile {
   ambassador_status_override: boolean;
   delivery_form_submitted: boolean;
   avatar_url: string | null;
+  role: UserRole;
+  admin_permissions: AdminTabId[];
 }
 
 export interface AmbassadorGift {

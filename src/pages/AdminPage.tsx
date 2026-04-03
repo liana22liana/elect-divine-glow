@@ -2,8 +2,9 @@ import { useState, useEffect } from "react";
 import {
   Plus, Pencil, Trash2, Video, Headphones, Users as UsersIcon,
   Sparkles, Search, Layers, GripVertical, ChevronDown, ChevronRight,
-  Shield, Send,
+  Shield, Send, Crown,
 } from "lucide-react";
+import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -22,7 +23,8 @@ import {
 } from "@/components/ui/alert-dialog";
 import { cn } from "@/lib/utils";
 import { AMBASSADOR_MILESTONES } from "@/lib/types";
-import type { AmbassadorStatus, Material, HabitTemplate, LibrarySection, LibrarySubsection } from "@/lib/types";
+import type { AmbassadorStatus, Material, HabitTemplate, LibrarySection, LibrarySubsection, AdminTabId } from "@/lib/types";
+import { Checkbox } from "@/components/ui/checkbox";
 import { toast } from "sonner";
 import {
   useSections, useAdminMaterials, useAdminUsers, useAdminTemplates,
@@ -32,7 +34,7 @@ import {
   useCreateTemplate, useUpdateUser,
 } from "@/hooks/useApiData";
 
-type TabId = "materials" | "structure" | "users" | "recommendations";
+type TabId = AdminTabId;
 
 type DeleteTarget = {
   type: "material" | "section" | "subsection" | "template";
@@ -48,7 +50,21 @@ const DELETE_MESSAGES: Record<DeleteTarget["type"], { title: string; desc: strin
 };
 
 const AdminPage = () => {
-  const [activeTab, setActiveTab] = useState<TabId>("materials");
+  const { user: currentUser } = useAuth();
+  const isSuperadmin = currentUser?.role === "superadmin";
+
+  const allTabs = [
+    { id: "materials" as const, label: "Материалы", icon: Video },
+    { id: "structure" as const, label: "Структура", icon: Layers },
+    { id: "users" as const, label: "Участницы", icon: UsersIcon },
+    { id: "recommendations" as const, label: "Рекомендации", icon: Sparkles },
+  ];
+
+  const visibleTabs = isSuperadmin
+    ? allTabs
+    : allTabs.filter((t) => currentUser?.admin_permissions?.includes(t.id));
+
+  const [activeTab, setActiveTab] = useState<TabId>(visibleTabs[0]?.id || "materials");
 
   // Dialog states
   const [materialDialogOpen, setMaterialDialogOpen] = useState(false);
@@ -109,11 +125,11 @@ const AdminPage = () => {
 
   const selectedMatSection = sections.find((s) => s.id === matSectionId);
 
-  const tabs = [
-    { id: "materials" as const, label: "Материалы", icon: Video },
-    { id: "structure" as const, label: "Структура", icon: Layers },
-    { id: "users" as const, label: "Участницы", icon: UsersIcon },
-    { id: "recommendations" as const, label: "Рекомендации", icon: Sparkles },
+  const ALL_PERMISSION_TABS: { id: AdminTabId; label: string }[] = [
+    { id: "materials", label: "Материалы" },
+    { id: "structure", label: "Структура" },
+    { id: "users", label: "Участницы" },
+    { id: "recommendations", label: "Рекомендации" },
   ];
 
   const filteredTemplates = templates.filter((t) => {
@@ -293,7 +309,7 @@ const AdminPage = () => {
 
       {/* Tabs */}
       <div className="flex gap-2 border-b border-border overflow-x-auto">
-        {tabs.map(({ id, label, icon: Icon }) => (
+        {visibleTabs.map(({ id, label, icon: Icon }) => (
           <button
             key={id}
             onClick={() => setActiveTab(id)}
@@ -439,7 +455,19 @@ const AdminPage = () => {
                       <span className="text-sm font-semibold text-primary">{user.name.charAt(0)}</span>
                     </div>
                     <div className="min-w-0 flex-1">
-                      <h3 className="text-sm font-medium text-foreground">{user.name}</h3>
+                      <div className="flex items-center gap-2">
+                        <h3 className="text-sm font-medium text-foreground">{user.name}</h3>
+                        {user.role === "superadmin" && (
+                          <span className="inline-flex items-center gap-1 rounded-full bg-primary/15 px-1.5 py-0.5 text-[10px] font-medium text-primary">
+                            <Crown className="h-2.5 w-2.5" /> Суперадмин
+                          </span>
+                        )}
+                        {user.role === "admin" && (
+                          <span className="inline-flex items-center gap-1 rounded-full bg-accent/50 px-1.5 py-0.5 text-[10px] font-medium text-accent-foreground">
+                            <Shield className="h-2.5 w-2.5" /> Админ
+                          </span>
+                        )}
+                      </div>
                       <p className="text-xs text-muted-foreground">{user.email}</p>
                     </div>
                     <div className="flex items-center gap-3">
@@ -519,6 +547,55 @@ const AdminPage = () => {
                       <p className="text-xs text-muted-foreground">
                         Дата вступления: {new Date(user.created_at).toLocaleDateString("ru-RU")}
                       </p>
+
+                      {/* ── Superadmin: role management ── */}
+                      {isSuperadmin && (
+                        <div className="mt-4 rounded-lg border border-primary/20 bg-primary/5 p-4 space-y-3">
+                          <div className="flex items-center gap-2">
+                            <Crown className="h-4 w-4 text-primary" />
+                            <span className="text-sm font-medium text-foreground">Управление доступом</span>
+                          </div>
+                          <div className="flex items-center gap-3">
+                            <Label className="text-xs text-muted-foreground min-w-[60px]">Роль</Label>
+                            <Select
+                              value={user.role || "user"}
+                              onValueChange={(val) => handleUpdateUser(user.id, { role: val })}
+                            >
+                              <SelectTrigger className="h-9 text-sm w-48"><SelectValue /></SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="user">Пользователь</SelectItem>
+                                <SelectItem value="admin">Админ</SelectItem>
+                                <SelectItem value="superadmin">Суперадмин</SelectItem>
+                              </SelectContent>
+                            </Select>
+                          </div>
+                          {(user.role === "admin") && (
+                            <div className="space-y-2">
+                              <Label className="text-xs text-muted-foreground">Доступные разделы</Label>
+                              <div className="flex flex-wrap gap-3">
+                                {ALL_PERMISSION_TABS.map((tab) => {
+                                  const perms: AdminTabId[] = user.admin_permissions || [];
+                                  const checked = perms.includes(tab.id);
+                                  return (
+                                    <label key={tab.id} className="flex items-center gap-2 cursor-pointer">
+                                      <Checkbox
+                                        checked={checked}
+                                        onCheckedChange={(c) => {
+                                          const next = c
+                                            ? [...perms, tab.id]
+                                            : perms.filter((p) => p !== tab.id);
+                                          handleUpdateUser(user.id, { admin_permissions: next });
+                                        }}
+                                      />
+                                      <span className="text-sm text-foreground">{tab.label}</span>
+                                    </label>
+                                  );
+                                })}
+                              </div>
+                            </div>
+                          )}
+                        </div>
+                      )}
                     </div>
                   )}
                 </div>
