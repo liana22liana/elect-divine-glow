@@ -1,60 +1,77 @@
 
 
-## Plan: Make Admin Panel Fully Functional
+## Plan: Role-Based Admin Access with Super-Admin
 
-Wire up all admin forms (create, edit, delete) to the real API and add missing mutation hooks.
+### Overview
 
-### What will change
+Add a role system where you (super-admin) can grant admin access to other users and control which admin tabs they see. This requires both backend and frontend changes.
 
-**1. New mutation hooks in `src/hooks/useApiData.ts`**
+### Backend changes (on your VPS)
 
-Add hooks that are currently missing:
-- `useUpdateMaterial` — `PUT /admin/materials/:id`
-- `useCreateSection` — `POST /admin/sections`
-- `useUpdateSection` — `PUT /admin/sections/:id`
-- `useDeleteSection` — `DELETE /admin/sections/:id`
-- `useCreateSubsection` — `POST /admin/subsections`
-- `useDeleteSubsection` — `DELETE /admin/subsections/:id`
-- `useCreateTemplate` — `POST /admin/templates`
-- `useUpdateUser` — `PUT /admin/users/:id` (ambassador status, gifts, delivery)
+**1. Add roles to the database**
 
-**2. Rewrite `src/pages/AdminPage.tsx`**
+```sql
+-- Add role column to users table
+ALTER TABLE users ADD COLUMN role VARCHAR(20) DEFAULT 'user';
+-- Values: 'user', 'admin', 'superadmin'
 
-Currently all dialogs are "dead" — forms don't collect state and buttons don't call the API. Changes:
+-- Add admin permissions (which tabs an admin can see)
+ALTER TABLE users ADD COLUMN admin_permissions JSONB DEFAULT '[]';
+-- Example: ["materials", "structure", "users", "recommendations"]
+```
 
-- **Materials tab**: Add controlled form state (`title`, `description`, `section_id`, `subsection_id`, `type`, `video_url`). "Сохранить" calls `useCreateMaterial` or `useUpdateMaterial`. Pencil button opens dialog pre-filled with existing data. Trash button shows confirmation dialog then calls `useDeleteMaterial`.
+Set your own account as superadmin:
+```sql
+UPDATE users SET role = 'superadmin' WHERE email = 'your@email.com';
+```
 
-- **Structure tab**: Section dialog collects `name` + `icon`, calls `useCreateSection` / `useUpdateSection`. Subsection dialog collects `name`, calls `useCreateSubsection` with `parentSectionId`. Pencil and trash buttons on sections/subsections wired to edit/delete with confirmation.
+**2. Add API endpoints**
 
-- **Users tab**: Ambassador status switch calls `useUpdateUser` with `ambassador_status_override`. Status dropdown calls `useUpdateUser` with selected status. TG link send button calls `useUpdateUser`. Physical gift status dropdown calls `useUpdateUser`. All changes save immediately on interaction.
+- `PUT /api/admin/users/:id` — already exists, extend to accept `role` and `admin_permissions` fields
+- Add middleware: check `role = 'admin' OR 'superadmin'` for all `/api/admin/*` routes
+- Superadmin-only middleware for role management endpoints
 
-- **Recommendations tab**: Dialog collects `title`, `description`, `category`, `source_content_id` and calls `useCreateTemplate`. Pencil button opens pre-filled edit form. Delete already works via `useDeleteTemplate`.
+**3. Protect admin routes server-side**
 
-- **Universal delete confirmation**: Extend the existing `AlertDialog` to handle all entity types (materials, sections, subsections, templates) — store `deleteTarget: { type, id }` instead of just `deleteId`.
+The backend should verify that the requesting user's role allows access to the specific admin function being called.
 
-**3. Toast notifications**
+### Frontend changes
 
-Add success/error toasts on all mutations using `onSuccess` / `onError` callbacks so the admin gets feedback.
+**1. Update types (`src/lib/types.ts`)**
 
-### Technical details
+Add `role` and `admin_permissions` fields to `UserProfile`:
+```ts
+role: 'user' | 'admin' | 'superadmin';
+admin_permissions: TabId[];  // ["materials", "structure", "users", "recommendations"]
+```
 
-- All form state managed with `useState` in AdminPage (no external form library needed — forms are simple)
-- Edit mode: store `editingItem` state; when set, dialog opens pre-filled and submit calls update instead of create
-- After each mutation success, React Query automatically refetches the relevant list via `invalidateQueries`
-- Input validation: required fields checked client-side before submit; API returns errors for server-side validation
+**2. Update AdminPage (`src/pages/AdminPage.tsx`)**
+
+- Filter visible tabs based on `user.admin_permissions` (superadmin sees all)
+- Add a new "Админы" section inside the "Участницы" tab (visible only to superadmin):
+  - Toggle to make a user an admin
+  - Checkboxes to select which tabs they can access (Материалы, Структура, Участницы, Рекомендации)
+
+**3. Protect admin route (`src/App.tsx`)**
+
+- Only show `/admin` route if `user.role === 'admin' || 'superadmin'`
+- Hide admin link in sidebar/nav for regular users
+
+**4. Update sidebar (`src/components/DesktopSidebar.tsx` / `src/components/BottomNav.tsx`)**
+
+- Conditionally show admin nav link based on user role
 
 ### Files to modify
 
-| File | Changes |
-|------|---------|
-| `src/hooks/useApiData.ts` | Add 7 new mutation hooks (section/subsection CRUD, update material, create template, update user) |
-| `src/pages/AdminPage.tsx` | Wire all forms with controlled state, connect to mutations, add edit mode, universal delete confirmation, toast feedback |
-| `src/lib/api.ts` | Verify all admin endpoints exist (most already do — may need `subsections.update`) |
+| File | Change |
+|------|--------|
+| `src/lib/types.ts` | Add `role`, `admin_permissions` to `UserProfile` |
+| `src/pages/AdminPage.tsx` | Filter tabs by permissions; add admin management UI for superadmin |
+| `src/App.tsx` | Guard `/admin` route by role |
+| `src/components/DesktopSidebar.tsx` | Hide admin link for non-admin users |
+| `src/components/BottomNav.tsx` | Hide admin link for non-admin users |
 
-### Order of implementation
+### Important
 
-1. Add missing mutation hooks to `useApiData.ts`
-2. Refactor AdminPage — add form state management for all 4 tabs
-3. Connect create/edit/delete buttons to mutations with toast feedback
-4. Add universal delete confirmation dialog
+The backend (VPS) must be updated **first** — add the `role` and `admin_permissions` columns and update the admin middleware. Without that, the frontend changes won't have data to work with. I can implement the frontend part once you confirm the backend is ready.
 
