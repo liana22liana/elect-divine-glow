@@ -7,28 +7,20 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Slider } from "@/components/ui/slider";
 import { Calendar } from "@/components/ui/calendar";
+import { Skeleton } from "@/components/ui/skeleton";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
+  Dialog, DialogContent, DialogHeader, DialogTitle,
 } from "@/components/ui/dialog";
 import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
+  Popover, PopoverContent, PopoverTrigger,
 } from "@/components/ui/popover";
 import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
+  Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
-import { mockHabitTemplates, mockMaterials, LIBRARY_SECTIONS } from "@/lib/mock-data";
 import { cn } from "@/lib/utils";
+import { useSections, useAdminTemplates, useMaterials, useCreateHabit } from "@/hooks/useApiData";
 
 interface AddHabitDialogProps {
   open: boolean;
@@ -44,6 +36,11 @@ const AddHabitDialog = ({ open, onOpenChange }: AddHabitDialogProps) => {
   const [totalTarget, setTotalTarget] = useState("");
   const [selectedTemplate, setSelectedTemplate] = useState<string | null>(null);
 
+  const { data: sections = [] } = useSections();
+  const { data: templates = [] } = useAdminTemplates();
+  const { data: materials = [] } = useMaterials();
+  const createHabit = useCreateHabit();
+
   const resetForm = () => {
     setTitle("");
     setFrequencyMode("daily");
@@ -55,6 +52,13 @@ const AddHabitDialog = ({ open, onOpenChange }: AddHabitDialogProps) => {
   };
 
   const handleAdd = () => {
+    createHabit.mutate({
+      title,
+      frequency_type: frequencyMode === "custom" ? "weekly" : frequencyMode,
+      frequency_count: frequencyMode === "custom" ? customCount[0] : frequencyMode === "daily" ? 1 : 1,
+      deadline: hasDeadline && deadline ? deadline.toISOString().split("T")[0] : null,
+      total_target: hasDeadline && totalTarget ? parseInt(totalTarget) : null,
+    });
     resetForm();
     onOpenChange(false);
   };
@@ -170,10 +174,10 @@ const AddHabitDialog = ({ open, onOpenChange }: AddHabitDialogProps) => {
           </TabsContent>
 
           <TabsContent value="club" className="space-y-3 pt-2">
-            {mockHabitTemplates.map((template) => {
-              const section = LIBRARY_SECTIONS.find((s) => s.id === template.category);
+            {templates.map((template) => {
+              const section = sections.find((s) => s.id === template.category);
               const material = template.source_content_id
-                ? mockMaterials.find((m) => m.id === template.source_content_id)
+                ? materials.find((m) => m.id === template.source_content_id)
                 : null;
 
               return (
@@ -205,7 +209,17 @@ const AddHabitDialog = ({ open, onOpenChange }: AddHabitDialogProps) => {
                     variant="outline"
                     size="sm"
                     className="h-9 w-full gap-1.5 rounded-lg"
-                    onClick={handleAdd}
+                    onClick={() => {
+                      createHabit.mutate({
+                        title: template.title,
+                        template_id: template.id,
+                        frequency_type: "daily",
+                        frequency_count: 1,
+                        category: template.category,
+                        source_content_id: template.source_content_id,
+                      });
+                      onOpenChange(false);
+                    }}
                   >
                     <Plus className="h-3.5 w-3.5" />
                     Добавить в мои цели

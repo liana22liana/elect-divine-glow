@@ -3,7 +3,7 @@ import { Link } from "react-router-dom";
 import { Check, Flame, ExternalLink, Gem, Heart, Sparkles, Brain, Users, Flower2, Moon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
-import { LIBRARY_SECTIONS, type Habit, type HabitLog } from "@/lib/mock-data";
+import type { Habit, HabitLog } from "@/lib/types";
 import { cn } from "@/lib/utils";
 
 const categoryIcons: Record<string, React.ElementType> = {
@@ -30,6 +30,7 @@ interface HabitCardProps {
   habit: Habit;
   logs: HabitLog[];
   onMarkToday: (habitId: string) => void;
+  sectionLabel?: string;
 }
 
 function getStreak(logs: HabitLog[]): number {
@@ -66,11 +67,10 @@ function getLast28Days(): string[] {
   return days;
 }
 
-const HabitCard = ({ habit, logs, onMarkToday }: HabitCardProps) => {
+const HabitCard = ({ habit, logs, onMarkToday, sectionLabel }: HabitCardProps) => {
   const [animating, setAnimating] = useState(false);
   const Icon = categoryIcons[habit.category || "practices"] || Sparkles;
-  const section = LIBRARY_SECTIONS.find((s) => s.id === habit.category);
-  const sectionLabel = section?.name || habit.category || "";
+  const label = sectionLabel || habit.category || "";
   const streak = getStreak(logs);
   const completedDates = new Set(logs.filter((l) => l.completed).map((l) => l.date));
   const today = new Date().toISOString().split("T")[0];
@@ -103,7 +103,7 @@ const HabitCard = ({ habit, logs, onMarkToday }: HabitCardProps) => {
               {habit.title}
             </h3>
             <p className="text-xs text-muted-foreground">
-              {sectionLabel} · {frequencyLabel}
+              {label} · {frequencyLabel}
             </p>
           </div>
         </div>

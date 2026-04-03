@@ -2,22 +2,35 @@ import { useState, useEffect } from "react";
 import { useParams, Link, useSearchParams, useNavigate } from "react-router-dom";
 import { ArrowLeft, Video, Headphones, Play } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { mockMaterials, LIBRARY_SECTIONS } from "@/lib/mock-data";
+import { Skeleton } from "@/components/ui/skeleton";
+import { useMaterial, useSections } from "@/hooks/useApiData";
 
 const MaterialPage = () => {
   const { id } = useParams();
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
   const isPreview = searchParams.get("preview") === "1";
-  const material = mockMaterials.find((m) => m.id === id);
+  const { data: material, isLoading } = useMaterial(id || "");
+  const { data: sections = [] } = useSections();
   const [showOverlay, setShowOverlay] = useState(false);
 
   useEffect(() => {
     if (!isPreview) { setShowOverlay(false); return; }
     const timer = setTimeout(() => setShowOverlay(true), 15000);
-    setShowOverlay(true); // show immediately with option to dismiss
+    setShowOverlay(true);
     return () => clearTimeout(timer);
   }, [isPreview]);
+
+  if (isLoading) {
+    return (
+      <div className="space-y-6">
+        <Skeleton className="h-6 w-40" />
+        <Skeleton className="aspect-video w-full rounded-lg" />
+        <Skeleton className="h-8 w-3/4" />
+        <Skeleton className="h-20 w-full" />
+      </div>
+    );
+  }
 
   if (!material) {
     return (
@@ -30,7 +43,7 @@ const MaterialPage = () => {
     );
   }
 
-  const section = LIBRARY_SECTIONS.find((s) => s.id === material.section_id);
+  const section = sections.find((s) => s.id === material.section_id);
   const subsection = section?.subsections.find((sub) => sub.id === material.subsection_id);
   const additionalMaterials = material.additional_materials || [];
 
@@ -71,7 +84,6 @@ const MaterialPage = () => {
           </div>
         )}
 
-        {/* Preview overlay */}
         {isPreview && showOverlay && (
           <div className="absolute inset-0 flex flex-col items-center justify-end bg-gradient-to-t from-foreground/80 via-foreground/30 to-transparent p-6">
             <div className="flex flex-col items-center gap-3 text-center">
@@ -121,7 +133,6 @@ const MaterialPage = () => {
         </p>
       </div>
 
-      {/* Additional materials */}
       {additionalMaterials.length > 0 && (
         <div className="space-y-3">
           <h2 className="font-heading text-xl font-semibold text-foreground">

@@ -2,12 +2,17 @@ import { useRef } from "react";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import MaterialCard from "@/components/MaterialCard";
 import CategoryCard from "@/components/CategoryCard";
-import { mockMaterials, LIBRARY_SECTIONS } from "@/lib/mock-data";
+import { Skeleton } from "@/components/ui/skeleton";
+import { useMaterials, useSections } from "@/hooks/useApiData";
+import { useAuth } from "@/contexts/AuthContext";
 
 const HomePage = () => {
   const scrollRef = useRef<HTMLDivElement>(null);
+  const { data: materials = [], isLoading: loadingMat } = useMaterials();
+  const { data: sections = [], isLoading: loadingSec } = useSections();
+  const { user } = useAuth();
 
-  const latestMaterials = mockMaterials
+  const latestMaterials = [...materials]
     .filter((m) => m.is_published)
     .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
     .slice(0, 5);
@@ -25,7 +30,7 @@ const HomePage = () => {
     <div className="space-y-10 animate-fade-in">
       <div>
         <h1 className="font-heading text-3xl font-semibold text-foreground lg:text-4xl">
-          Добро пожаловать, Избранная Женщина
+          Добро пожаловать{user?.name ? `, ${user.name}` : ", Избранная Женщина"}
         </h1>
         <p className="mt-1 text-sm text-muted-foreground">
           Рада видеть тебя в клубе ✨
@@ -57,15 +62,21 @@ const HomePage = () => {
           className="flex gap-4 overflow-x-auto pb-2 scrollbar-hide snap-x snap-mandatory"
           style={{ scrollbarWidth: "none", msOverflowStyle: "none" }}
         >
-          {latestMaterials.map((material, i) => (
-            <div
-              key={material.id}
-              className="w-72 flex-shrink-0 snap-start animate-slide-up"
-              style={{ animationDelay: `${0.1 + i * 0.05}s` }}
-            >
-              <MaterialCard material={material} previewEnabled={true} />
-            </div>
-          ))}
+          {loadingMat
+            ? Array.from({ length: 3 }).map((_, i) => (
+                <div key={i} className="w-72 flex-shrink-0 snap-start">
+                  <Skeleton className="h-48 w-full rounded-2xl" />
+                </div>
+              ))
+            : latestMaterials.map((material, i) => (
+                <div
+                  key={material.id}
+                  className="w-72 flex-shrink-0 snap-start animate-slide-up"
+                  style={{ animationDelay: `${0.1 + i * 0.05}s` }}
+                >
+                  <MaterialCard material={material} previewEnabled={true} />
+                </div>
+              ))}
         </div>
       </section>
 
@@ -74,11 +85,15 @@ const HomePage = () => {
           Разделы
         </h2>
         <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4">
-          {LIBRARY_SECTIONS.map((sec, i) => (
-            <div key={sec.id} className="animate-fade-in" style={{ animationDelay: `${0.2 + i * 0.05}s` }}>
-              <CategoryCard id={sec.id} label={sec.name} icon={sec.icon} />
-            </div>
-          ))}
+          {loadingSec
+            ? Array.from({ length: 4 }).map((_, i) => (
+                <Skeleton key={i} className="h-24 w-full rounded-2xl" />
+              ))
+            : sections.map((sec, i) => (
+                <div key={sec.id} className="animate-fade-in" style={{ animationDelay: `${0.2 + i * 0.05}s` }}>
+                  <CategoryCard id={sec.id} label={sec.name} icon={sec.icon} />
+                </div>
+              ))}
         </div>
       </section>
     </div>

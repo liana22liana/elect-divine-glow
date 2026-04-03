@@ -4,17 +4,26 @@ import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { toast } from "@/hooks/use-toast";
 
 const LoginPage = () => {
   const navigate = useNavigate();
   const { login } = useAuth();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [loading, setLoading] = useState(false);
 
-  const handleLogin = (e: React.FormEvent) => {
+  const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
-    login();
-    navigate("/");
+    setLoading(true);
+    try {
+      await login(email, password);
+      navigate("/");
+    } catch (err: any) {
+      toast({ title: "Ошибка входа", description: err.message || "Неверный email или пароль", variant: "destructive" });
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -61,9 +70,10 @@ const LoginPage = () => {
           </div>
           <Button
             type="submit"
+            disabled={loading}
             className="h-12 w-full rounded-xl text-base font-medium"
           >
-            Войти
+            {loading ? "Вход..." : "Войти"}
           </Button>
           <div className="text-center">
             <button
