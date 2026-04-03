@@ -535,6 +535,55 @@ const AdminPage = () => {
                       <p className="text-xs text-muted-foreground">
                         Дата вступления: {new Date(user.created_at).toLocaleDateString("ru-RU")}
                       </p>
+
+                      {/* ── Superadmin: role management ── */}
+                      {isSuperadmin && (
+                        <div className="mt-4 rounded-lg border border-primary/20 bg-primary/5 p-4 space-y-3">
+                          <div className="flex items-center gap-2">
+                            <Crown className="h-4 w-4 text-primary" />
+                            <span className="text-sm font-medium text-foreground">Управление доступом</span>
+                          </div>
+                          <div className="flex items-center gap-3">
+                            <Label className="text-xs text-muted-foreground min-w-[60px]">Роль</Label>
+                            <Select
+                              value={user.role || "user"}
+                              onValueChange={(val) => handleUpdateUser(user.id, { role: val })}
+                            >
+                              <SelectTrigger className="h-9 text-sm w-48"><SelectValue /></SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="user">Пользователь</SelectItem>
+                                <SelectItem value="admin">Админ</SelectItem>
+                                <SelectItem value="superadmin">Суперадмин</SelectItem>
+                              </SelectContent>
+                            </Select>
+                          </div>
+                          {(user.role === "admin") && (
+                            <div className="space-y-2">
+                              <Label className="text-xs text-muted-foreground">Доступные разделы</Label>
+                              <div className="flex flex-wrap gap-3">
+                                {ALL_PERMISSION_TABS.map((tab) => {
+                                  const perms: AdminTabId[] = user.admin_permissions || [];
+                                  const checked = perms.includes(tab.id);
+                                  return (
+                                    <label key={tab.id} className="flex items-center gap-2 cursor-pointer">
+                                      <Checkbox
+                                        checked={checked}
+                                        onCheckedChange={(c) => {
+                                          const next = c
+                                            ? [...perms, tab.id]
+                                            : perms.filter((p) => p !== tab.id);
+                                          handleUpdateUser(user.id, { admin_permissions: next });
+                                        }}
+                                      />
+                                      <span className="text-sm text-foreground">{tab.label}</span>
+                                    </label>
+                                  );
+                                })}
+                              </div>
+                            </div>
+                          )}
+                        </div>
+                      )}
                     </div>
                   )}
                 </div>
