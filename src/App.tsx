@@ -23,6 +23,12 @@ const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
   return <>{children}</>;
 };
 
+const AdminRoute = ({ children }: { children: React.ReactNode }) => {
+  const { user } = useAuth();
+  if (user?.role !== "admin" && user?.role !== "superadmin") return <Navigate to="/" replace />;
+  return <>{children}</>;
+};
+
 const AppRoutes = () => (
   <Routes>
     <Route path="/login" element={<LoginPage />} />
