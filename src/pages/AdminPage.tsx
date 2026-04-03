@@ -125,11 +125,11 @@ const AdminPage = () => {
 
   const selectedMatSection = sections.find((s) => s.id === matSectionId);
 
-  const tabs = [
-    { id: "materials" as const, label: "Материалы", icon: Video },
-    { id: "structure" as const, label: "Структура", icon: Layers },
-    { id: "users" as const, label: "Участницы", icon: UsersIcon },
-    { id: "recommendations" as const, label: "Рекомендации", icon: Sparkles },
+  const ALL_PERMISSION_TABS: { id: AdminTabId; label: string }[] = [
+    { id: "materials", label: "Материалы" },
+    { id: "structure", label: "Структура" },
+    { id: "users", label: "Участницы" },
+    { id: "recommendations", label: "Рекомендации" },
   ];
 
   const filteredTemplates = templates.filter((t) => {
