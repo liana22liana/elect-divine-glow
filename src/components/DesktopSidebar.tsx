@@ -32,7 +32,7 @@ const DesktopSidebar = () => {
       </div>
 
       <nav className="flex flex-1 flex-col gap-1 px-4">
-        {navItems.map(({ to, icon: Icon, label }) => (
+        {[...baseNavItems, ...(user?.role === "admin" || user?.role === "superadmin" ? [{ to: "/admin", icon: Shield, label: "Админ" }] : [])].map(({ to, icon: Icon, label }) => (
           <NavLink
             key={to}
             to={to}

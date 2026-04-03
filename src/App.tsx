@@ -44,7 +44,7 @@ const AppRoutes = () => (
       <Route path="/material/:id" element={<MaterialPage />} />
       <Route path="/goals" element={<GoalsPage />} />
       <Route path="/profile" element={<ProfilePage />} />
-      <Route path="/admin" element={<AdminPage />} />
+      <Route path="/admin" element={<AdminRoute><AdminPage /></AdminRoute>} />
     </Route>
     <Route path="*" element={<NotFound />} />
   </Routes>
