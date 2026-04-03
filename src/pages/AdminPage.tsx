@@ -309,7 +309,7 @@ const AdminPage = () => {
 
       {/* Tabs */}
       <div className="flex gap-2 border-b border-border overflow-x-auto">
-        {tabs.map(({ id, label, icon: Icon }) => (
+        {visibleTabs.map(({ id, label, icon: Icon }) => (
           <button
             key={id}
             onClick={() => setActiveTab(id)}
