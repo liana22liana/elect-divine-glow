@@ -34,7 +34,7 @@ import {
   useCreateTemplate, useUpdateUser,
 } from "@/hooks/useApiData";
 
-type TabId = "materials" | "structure" | "users" | "recommendations";
+type TabId = AdminTabId;
 
 type DeleteTarget = {
   type: "material" | "section" | "subsection" | "template";
