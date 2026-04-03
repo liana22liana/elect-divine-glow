@@ -23,7 +23,8 @@ import {
 } from "@/components/ui/alert-dialog";
 import { cn } from "@/lib/utils";
 import { AMBASSADOR_MILESTONES } from "@/lib/types";
-import type { AmbassadorStatus, Material, HabitTemplate, LibrarySection, LibrarySubsection } from "@/lib/types";
+import type { AmbassadorStatus, Material, HabitTemplate, LibrarySection, LibrarySubsection, AdminTabId } from "@/lib/types";
+import { Checkbox } from "@/components/ui/checkbox";
 import { toast } from "sonner";
 import {
   useSections, useAdminMaterials, useAdminUsers, useAdminTemplates,
