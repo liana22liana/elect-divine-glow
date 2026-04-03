@@ -1,6 +1,8 @@
 import { LogOut, Camera, Send, User } from "lucide-react";
+import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { mockUser } from "@/lib/mock-data";
+import { useAuth } from "@/contexts/AuthContext";
 import AmbassadorTimeline from "@/components/AmbassadorTimeline";
 
 const SUBSCRIPTION_LABELS: Record<string, { label: string; color: string }> = {
@@ -10,7 +12,14 @@ const SUBSCRIPTION_LABELS: Record<string, { label: string; color: string }> = {
 };
 
 const ProfilePage = () => {
+  const { logout } = useAuth();
+  const navigate = useNavigate();
   const sub = SUBSCRIPTION_LABELS[mockUser.subscription_status] || SUBSCRIPTION_LABELS.active;
+
+  const handleLogout = () => {
+    logout();
+    navigate("/login");
+  };
 
   return (
     <div className="space-y-6 pb-24 animate-fade-in">
@@ -95,6 +104,7 @@ const ProfilePage = () => {
       <Button
         variant="outline"
         className="h-12 w-full gap-2 rounded-xl text-muted-foreground"
+        onClick={handleLogout}
       >
         <LogOut className="h-4 w-4" strokeWidth={1.5} />
         Выйти из аккаунта

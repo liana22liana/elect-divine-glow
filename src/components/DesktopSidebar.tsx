@@ -1,7 +1,8 @@
 import { Home, BookOpen, Target, User, LogOut, Shield } from "lucide-react";
-import { NavLink } from "react-router-dom";
+import { NavLink, useNavigate } from "react-router-dom";
 import { cn } from "@/lib/utils";
 import { mockUser } from "@/lib/mock-data";
+import { useAuth } from "@/contexts/AuthContext";
 
 const navItems = [
   { to: "/", icon: Home, label: "Главная" },
@@ -12,6 +13,14 @@ const navItems = [
 ];
 
 const DesktopSidebar = () => {
+  const { logout } = useAuth();
+  const navigate = useNavigate();
+
+  const handleLogout = () => {
+    logout();
+    navigate("/login");
+  };
+
   return (
     <aside className="fixed left-0 top-0 hidden h-screen w-64 flex-col border-r border-border bg-sidebar backdrop-blur-md lg:flex">
       <div className="flex flex-col items-center gap-1 px-6 py-8">
@@ -56,7 +65,10 @@ const DesktopSidebar = () => {
           </div>
           <span className="text-sm font-body text-foreground truncate">{mockUser.name}</span>
         </div>
-        <button className="flex w-full items-center gap-3 rounded-xl px-4 py-3 text-sm text-muted-foreground transition-all duration-200 hover:bg-muted hover:text-foreground">
+        <button
+          onClick={handleLogout}
+          className="flex w-full items-center gap-3 rounded-xl px-4 py-3 text-sm text-muted-foreground transition-all duration-200 hover:bg-muted hover:text-foreground"
+        >
           <LogOut className="h-5 w-5" strokeWidth={1.5} />
           Выйти
         </button>
