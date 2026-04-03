@@ -455,7 +455,19 @@ const AdminPage = () => {
                       <span className="text-sm font-semibold text-primary">{user.name.charAt(0)}</span>
                     </div>
                     <div className="min-w-0 flex-1">
-                      <h3 className="text-sm font-medium text-foreground">{user.name}</h3>
+                      <div className="flex items-center gap-2">
+                        <h3 className="text-sm font-medium text-foreground">{user.name}</h3>
+                        {user.role === "superadmin" && (
+                          <span className="inline-flex items-center gap-1 rounded-full bg-primary/15 px-1.5 py-0.5 text-[10px] font-medium text-primary">
+                            <Crown className="h-2.5 w-2.5" /> Суперадмин
+                          </span>
+                        )}
+                        {user.role === "admin" && (
+                          <span className="inline-flex items-center gap-1 rounded-full bg-accent/50 px-1.5 py-0.5 text-[10px] font-medium text-accent-foreground">
+                            <Shield className="h-2.5 w-2.5" /> Админ
+                          </span>
+                        )}
+                      </div>
                       <p className="text-xs text-muted-foreground">{user.email}</p>
                     </div>
                     <div className="flex items-center gap-3">
