@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { Check, Lock, Gift } from "lucide-react";
-import { AMBASSADOR_MILESTONES, type AmbassadorStatus } from "@/lib/mock-data";
+import { AMBASSADOR_MILESTONES, type AmbassadorStatus } from "@/lib/types";
 import { cn } from "@/lib/utils";
 import AmbassadorCongratDialog from "./AmbassadorCongratDialog";
 

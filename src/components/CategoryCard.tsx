@@ -1,6 +1,6 @@
 import { Link } from "react-router-dom";
 import { Gem, Heart, Sparkles, Brain, Users, Flower2, Moon, type LucideIcon } from "lucide-react";
-import { mockMaterials } from "@/lib/mock-data";
+import { useMaterials } from "@/hooks/useApiData";
 
 const iconMap: Record<string, LucideIcon> = {
   Gem, Heart, Sparkles, Brain, Users, Flower2, Moon,
@@ -24,7 +24,8 @@ interface CategoryCardProps {
 
 const CategoryCard = ({ id, label, icon }: CategoryCardProps) => {
   const Icon = iconMap[icon] || Gem;
-  const count = mockMaterials.filter((m) => m.section_id === id && m.is_published).length;
+  const { data: materials = [] } = useMaterials();
+  const count = materials.filter((m) => m.section_id === id && m.is_published).length;
   const colors = CATEGORY_COLORS[id] || "bg-secondary/15 text-secondary";
 
   return (
