@@ -2,8 +2,9 @@ import { useState, useEffect } from "react";
 import {
   Plus, Pencil, Trash2, Video, Headphones, Users as UsersIcon,
   Sparkles, Search, Layers, GripVertical, ChevronDown, ChevronRight,
-  Shield, Send,
+  Shield, Send, Crown,
 } from "lucide-react";
+import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
