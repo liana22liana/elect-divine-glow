@@ -50,7 +50,21 @@ const DELETE_MESSAGES: Record<DeleteTarget["type"], { title: string; desc: strin
 };
 
 const AdminPage = () => {
-  const [activeTab, setActiveTab] = useState<TabId>("materials");
+  const { user: currentUser } = useAuth();
+  const isSuperadmin = currentUser?.role === "superadmin";
+
+  const allTabs = [
+    { id: "materials" as const, label: "Материалы", icon: Video },
+    { id: "structure" as const, label: "Структура", icon: Layers },
+    { id: "users" as const, label: "Участницы", icon: UsersIcon },
+    { id: "recommendations" as const, label: "Рекомендации", icon: Sparkles },
+  ];
+
+  const visibleTabs = isSuperadmin
+    ? allTabs
+    : allTabs.filter((t) => currentUser?.admin_permissions?.includes(t.id));
+
+  const [activeTab, setActiveTab] = useState<TabId>(visibleTabs[0]?.id || "materials");
 
   // Dialog states
   const [materialDialogOpen, setMaterialDialogOpen] = useState(false);
