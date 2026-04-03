@@ -12,7 +12,14 @@ const SUBSCRIPTION_LABELS: Record<string, { label: string; color: string }> = {
 };
 
 const ProfilePage = () => {
+  const { logout } = useAuth();
+  const navigate = useNavigate();
   const sub = SUBSCRIPTION_LABELS[mockUser.subscription_status] || SUBSCRIPTION_LABELS.active;
+
+  const handleLogout = () => {
+    logout();
+    navigate("/login");
+  };
 
   return (
     <div className="space-y-6 pb-24 animate-fade-in">
