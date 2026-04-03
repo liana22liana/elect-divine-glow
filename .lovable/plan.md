@@ -1,63 +1,60 @@
 
 
-## Plan: Connect Frontend to External API
+## Plan: Make Admin Panel Fully Functional
 
-Replace all mock data with real API calls to `http://83.147.247.183:3000`.
+Wire up all admin forms (create, edit, delete) to the real API and add missing mutation hooks.
 
-### Overview
+### What will change
 
-Create an API client layer, update AuthContext for real JWT auth, and replace mock data imports across all pages with React Query hooks that fetch from the VPS API.
+**1. New mutation hooks in `src/hooks/useApiData.ts`**
 
-### Files to create
+Add hooks that are currently missing:
+- `useUpdateMaterial` — `PUT /admin/materials/:id`
+- `useCreateSection` — `POST /admin/sections`
+- `useUpdateSection` — `PUT /admin/sections/:id`
+- `useDeleteSection` — `DELETE /admin/sections/:id`
+- `useCreateSubsection` — `POST /admin/subsections`
+- `useDeleteSubsection` — `DELETE /admin/subsections/:id`
+- `useCreateTemplate` — `POST /admin/templates`
+- `useUpdateUser` — `PUT /admin/users/:id` (ambassador status, gifts, delivery)
 
-| File | Purpose |
-|------|---------|
-| `src/lib/api.ts` | API client — base fetch wrapper with JWT token management, error handling, and all endpoint methods (auth, materials, sections, habits, profile, admin) |
-| `src/hooks/useApiData.ts` | React Query hooks: `useSections`, `useMaterials`, `useMaterial`, `useProfile`, `useHabits`, `useHabitLogs`, `useUsers` (admin), etc. + mutation hooks for login, register, create/delete habit, mark habit log |
+**2. Rewrite `src/pages/AdminPage.tsx`**
+
+Currently all dialogs are "dead" — forms don't collect state and buttons don't call the API. Changes:
+
+- **Materials tab**: Add controlled form state (`title`, `description`, `section_id`, `subsection_id`, `type`, `video_url`). "Сохранить" calls `useCreateMaterial` or `useUpdateMaterial`. Pencil button opens dialog pre-filled with existing data. Trash button shows confirmation dialog then calls `useDeleteMaterial`.
+
+- **Structure tab**: Section dialog collects `name` + `icon`, calls `useCreateSection` / `useUpdateSection`. Subsection dialog collects `name`, calls `useCreateSubsection` with `parentSectionId`. Pencil and trash buttons on sections/subsections wired to edit/delete with confirmation.
+
+- **Users tab**: Ambassador status switch calls `useUpdateUser` with `ambassador_status_override`. Status dropdown calls `useUpdateUser` with selected status. TG link send button calls `useUpdateUser`. Physical gift status dropdown calls `useUpdateUser`. All changes save immediately on interaction.
+
+- **Recommendations tab**: Dialog collects `title`, `description`, `category`, `source_content_id` and calls `useCreateTemplate`. Pencil button opens pre-filled edit form. Delete already works via `useDeleteTemplate`.
+
+- **Universal delete confirmation**: Extend the existing `AlertDialog` to handle all entity types (materials, sections, subsections, templates) — store `deleteTarget: { type, id }` instead of just `deleteId`.
+
+**3. Toast notifications**
+
+Add success/error toasts on all mutations using `onSuccess` / `onError` callbacks so the admin gets feedback.
+
+### Technical details
+
+- All form state managed with `useState` in AdminPage (no external form library needed — forms are simple)
+- Edit mode: store `editingItem` state; when set, dialog opens pre-filled and submit calls update instead of create
+- After each mutation success, React Query automatically refetches the relevant list via `invalidateQueries`
+- Input validation: required fields checked client-side before submit; API returns errors for server-side validation
 
 ### Files to modify
 
-| File | Change |
-|------|--------|
-| `src/contexts/AuthContext.tsx` | Store JWT token in state + localStorage. `login(email, password)` calls `POST /api/auth/login`, saves token. `logout()` clears token. Add `token`, `user` to context. On mount, check localStorage for token and call `GET /api/auth/me` to restore session. |
-| `src/pages/LoginPage.tsx` | Pass email/password to `login(email, password)`. Handle errors (show toast). |
-| `src/pages/HomePage.tsx` | Replace `mockMaterials` / `LIBRARY_SECTIONS` with `useMaterials` / `useSections` hooks. Show loading skeleton. |
-| `src/pages/LibraryPage.tsx` | Replace `mockMaterials` / `LIBRARY_SECTIONS` / `mockUser` with hooks. Pass section/subsection filters to API query params. |
-| `src/pages/MaterialPage.tsx` | Replace `mockMaterials.find()` with `useMaterial(id)` hook. |
-| `src/pages/GoalsPage.tsx` | Replace `mockHabits` / `mockHabitLogs` with `useHabits` / `useHabitLogs` hooks. Use mutation for marking habit complete. |
-| `src/pages/ProfilePage.tsx` | Replace `mockUser` with `useProfile` hook (or user from AuthContext). |
-| `src/pages/AdminPage.tsx` | Replace `mockMaterials`, `mockUsers`, `mockHabitTemplates`, `LIBRARY_SECTIONS` with admin API hooks. Wire up create/edit/delete buttons to mutations. |
-| `src/components/DesktopSidebar.tsx` | Replace `mockUser` with user from AuthContext. |
-| `src/components/HabitCard.tsx` | Remove `LIBRARY_SECTIONS` import, receive section label as prop or from parent. |
-| `src/components/MaterialCard.tsx` | Minimal changes — data already comes via props. |
-| `src/components/CategoryCard.tsx` | Minimal changes — data comes via props. |
-
-### Technical approach
-
-**API Client (`src/lib/api.ts`)**:
-- Base URL: `http://83.147.247.183:3000`
-- All requests include `Authorization: Bearer <token>` header when token exists
-- Methods: `api.auth.login(email, pw)`, `api.auth.register(...)`, `api.auth.me()`, `api.materials.list(params)`, `api.materials.get(id)`, `api.sections.list()`, `api.habits.list()`, `api.habits.create(data)`, `api.habits.markLog(habitId, date)`, `api.profile.get()`, `api.profile.update(data)`, `api.admin.users()`, `api.admin.materials.create/update/delete()`
-
-**AuthContext changes**:
-- `login(email, password)` → calls API, stores token in localStorage + state
-- On app mount: reads token from localStorage, calls `/api/auth/me` to validate
-- Exports `user` (profile data) and `token` alongside `isAuthenticated`
-
-**React Query hooks**:
-- Each hook uses `useQuery` with appropriate query keys
-- Mutations use `useMutation` with `queryClient.invalidateQueries` for cache refresh
-- Loading/error states handled in components with skeletons
-
-**Types**: Keep existing interfaces from `mock-data.ts` (Material, Habit, etc.) but move them to a `src/lib/types.ts` file. `mock-data.ts` will be kept temporarily as fallback reference but no longer imported by components.
+| File | Changes |
+|------|---------|
+| `src/hooks/useApiData.ts` | Add 7 new mutation hooks (section/subsection CRUD, update material, create template, update user) |
+| `src/pages/AdminPage.tsx` | Wire all forms with controlled state, connect to mutations, add edit mode, universal delete confirmation, toast feedback |
+| `src/lib/api.ts` | Verify all admin endpoints exist (most already do — may need `subsections.update`) |
 
 ### Order of implementation
 
-1. Create `src/lib/types.ts` — extract interfaces from mock-data
-2. Create `src/lib/api.ts` — API client
-3. Update `src/contexts/AuthContext.tsx` — real auth with JWT
-4. Create `src/hooks/useApiData.ts` — React Query hooks
-5. Update `LoginPage` — real login
-6. Update all pages (Home, Library, Material, Goals, Profile, Admin) — replace mocks with hooks
-7. Update `DesktopSidebar` — use user from context
+1. Add missing mutation hooks to `useApiData.ts`
+2. Refactor AdminPage — add form state management for all 4 tabs
+3. Connect create/edit/delete buttons to mutations with toast feedback
+4. Add universal delete confirmation dialog
 
