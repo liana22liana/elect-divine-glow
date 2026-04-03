@@ -101,10 +101,24 @@ export const useAdminTemplates = () =>
     queryFn: api.templates.list,
   });
 
+// ── Admin Mutations ──
+
 export const useCreateMaterial = () => {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: (data: Record<string, any>) => api.materials.create(data),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["materials"] });
+      qc.invalidateQueries({ queryKey: ["admin", "materials"] });
+    },
+  });
+};
+
+export const useUpdateMaterial = () => {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, data }: { id: string; data: Record<string, any> }) =>
+      api.materials.update(id, data),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["materials"] });
       qc.invalidateQueries({ queryKey: ["admin", "materials"] });
@@ -123,10 +137,76 @@ export const useDeleteMaterial = () => {
   });
 };
 
+// ── Sections CRUD ──
+
+export const useCreateSection = () => {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (data: Record<string, any>) => api.admin.sections.create(data),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["sections"] }),
+  });
+};
+
+export const useUpdateSection = () => {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, data }: { id: string; data: Record<string, any> }) =>
+      api.admin.sections.update(id, data),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["sections"] }),
+  });
+};
+
+export const useDeleteSection = () => {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string) => api.admin.sections.delete(id),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["sections"] }),
+  });
+};
+
+// ── Subsections CRUD ──
+
+export const useCreateSubsection = () => {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (data: Record<string, any>) => api.admin.subsections.create(data),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["sections"] }),
+  });
+};
+
+export const useDeleteSubsection = () => {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string) => api.admin.subsections.delete(id),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["sections"] }),
+  });
+};
+
+// ── Templates ──
+
+export const useCreateTemplate = () => {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (data: Record<string, any>) => api.templates.create(data),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["admin", "templates"] }),
+  });
+};
+
 export const useDeleteTemplate = () => {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: (id: string) => api.templates.delete(id),
     onSuccess: () => qc.invalidateQueries({ queryKey: ["admin", "templates"] }),
+  });
+};
+
+// ── Users ──
+
+export const useUpdateUser = () => {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, data }: { id: string; data: Record<string, any> }) =>
+      api.admin.updateUser(id, data),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["admin", "users"] }),
   });
 };

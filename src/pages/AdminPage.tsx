@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import {
   Plus, Pencil, Trash2, Video, Headphones, Users as UsersIcon,
   Sparkles, Search, Layers, GripVertical, ChevronDown, ChevronRight,
@@ -22,37 +22,90 @@ import {
 } from "@/components/ui/alert-dialog";
 import { cn } from "@/lib/utils";
 import { AMBASSADOR_MILESTONES } from "@/lib/types";
-import type { AmbassadorStatus } from "@/lib/types";
+import type { AmbassadorStatus, Material, HabitTemplate, LibrarySection, LibrarySubsection } from "@/lib/types";
+import { toast } from "sonner";
 import {
   useSections, useAdminMaterials, useAdminUsers, useAdminTemplates,
-  useDeleteMaterial, useDeleteTemplate,
+  useDeleteMaterial, useDeleteTemplate, useCreateMaterial, useUpdateMaterial,
+  useCreateSection, useUpdateSection, useDeleteSection,
+  useCreateSubsection, useDeleteSubsection,
+  useCreateTemplate, useUpdateUser,
 } from "@/hooks/useApiData";
 
 type TabId = "materials" | "structure" | "users" | "recommendations";
 
+type DeleteTarget = {
+  type: "material" | "section" | "subsection" | "template";
+  id: string;
+  label: string;
+};
+
+const DELETE_MESSAGES: Record<DeleteTarget["type"], { title: string; desc: string }> = {
+  material: { title: "Удалить материал?", desc: "Материал будет удалён из библиотеки." },
+  section: { title: "Удалить раздел?", desc: "Все подразделы и привязки материалов будут потеряны." },
+  subsection: { title: "Удалить подраздел?", desc: "Привязки материалов к подразделу будут потеряны." },
+  template: { title: "Удалить рекомендацию?", desc: "Привычки участниц, добавленные из этой рекомендации, останутся как свои." },
+};
+
 const AdminPage = () => {
   const [activeTab, setActiveTab] = useState<TabId>("materials");
+
+  // Dialog states
   const [materialDialogOpen, setMaterialDialogOpen] = useState(false);
   const [recDialogOpen, setRecDialogOpen] = useState(false);
   const [sectionDialogOpen, setSectionDialogOpen] = useState(false);
   const [subsectionDialogOpen, setSubsectionDialogOpen] = useState(false);
-  const [deleteId, setDeleteId] = useState<string | null>(null);
+  const [deleteTarget, setDeleteTarget] = useState<DeleteTarget | null>(null);
+
+  // Filters
   const [searchQuery, setSearchQuery] = useState("");
   const [filterCategory, setFilterCategory] = useState("all");
   const [expandedSections, setExpandedSections] = useState<Set<string>>(new Set());
   const [expandedUsers, setExpandedUsers] = useState<Set<string>>(new Set());
-  const [editingSectionId, setEditingSectionId] = useState<string | null>(null);
   const [parentSectionId, setParentSectionId] = useState<string | null>(null);
 
+  // ── Material form state ──
+  const [editingMaterial, setEditingMaterial] = useState<Material | null>(null);
+  const [matTitle, setMatTitle] = useState("");
+  const [matDescription, setMatDescription] = useState("");
   const [matSectionId, setMatSectionId] = useState("");
   const [matSubsectionId, setMatSubsectionId] = useState("");
+  const [matType, setMatType] = useState<"video" | "audio">("video");
+  const [matVideoUrl, setMatVideoUrl] = useState("");
 
+  // ── Section form state ──
+  const [editingSection, setEditingSection] = useState<LibrarySection | null>(null);
+  const [secName, setSecName] = useState("");
+  const [secIcon, setSecIcon] = useState("");
+
+  // ── Subsection form state ──
+  const [subName, setSubName] = useState("");
+
+  // ── Recommendation form state ──
+  const [editingTemplate, setEditingTemplate] = useState<HabitTemplate | null>(null);
+  const [recTitle, setRecTitle] = useState("");
+  const [recDescription, setRecDescription] = useState("");
+  const [recCategory, setRecCategory] = useState("");
+  const [recSourceId, setRecSourceId] = useState("");
+
+  // ── Data queries ──
   const { data: sections = [], isLoading: loadingSec } = useSections();
   const { data: materials = [], isLoading: loadingMat } = useAdminMaterials();
   const { data: users = [], isLoading: loadingUsers } = useAdminUsers();
   const { data: templates = [], isLoading: loadingTemplates } = useAdminTemplates();
+
+  // ── Mutations ──
+  const createMaterial = useCreateMaterial();
+  const updateMaterial = useUpdateMaterial();
   const deleteMaterial = useDeleteMaterial();
+  const createSection = useCreateSection();
+  const updateSection = useUpdateSection();
+  const deleteSection = useDeleteSection();
+  const createSubsection = useCreateSubsection();
+  const deleteSubsection = useDeleteSubsection();
+  const createTemplate = useCreateTemplate();
   const deleteTemplate = useDeleteTemplate();
+  const updateUser = useUpdateUser();
 
   const selectedMatSection = sections.find((s) => s.id === matSectionId);
 
@@ -72,8 +125,7 @@ const AdminPage = () => {
   const toggleSection = (id: string) => {
     setExpandedSections((prev) => {
       const next = new Set(prev);
-      if (next.has(id)) next.delete(id);
-      else next.add(id);
+      if (next.has(id)) next.delete(id); else next.add(id);
       return next;
     });
   };
@@ -81,9 +133,135 @@ const AdminPage = () => {
   const toggleUser = (id: string) => {
     setExpandedUsers((prev) => {
       const next = new Set(prev);
-      if (next.has(id)) next.delete(id);
-      else next.add(id);
+      if (next.has(id)) next.delete(id); else next.add(id);
       return next;
+    });
+  };
+
+  // ── Material dialog helpers ──
+  const openMaterialCreate = () => {
+    setEditingMaterial(null);
+    setMatTitle(""); setMatDescription(""); setMatSectionId(""); setMatSubsectionId("");
+    setMatType("video"); setMatVideoUrl("");
+    setMaterialDialogOpen(true);
+  };
+
+  const openMaterialEdit = (m: Material) => {
+    setEditingMaterial(m);
+    setMatTitle(m.title); setMatDescription(m.description);
+    setMatSectionId(m.section_id); setMatSubsectionId(m.subsection_id || "");
+    setMatType(m.type); setMatVideoUrl(m.video_url);
+    setMaterialDialogOpen(true);
+  };
+
+  const handleMaterialSubmit = () => {
+    if (!matTitle.trim() || !matSectionId) {
+      toast.error("Заполните название и выберите раздел");
+      return;
+    }
+    const payload = {
+      title: matTitle, description: matDescription, section_id: matSectionId,
+      subsection_id: matSubsectionId || null, type: matType, video_url: matVideoUrl,
+    };
+    if (editingMaterial) {
+      updateMaterial.mutate({ id: editingMaterial.id, data: payload }, {
+        onSuccess: () => { toast.success("Материал обновлён"); setMaterialDialogOpen(false); },
+        onError: (e) => toast.error(e.message),
+      });
+    } else {
+      createMaterial.mutate(payload, {
+        onSuccess: () => { toast.success("Материал создан"); setMaterialDialogOpen(false); },
+        onError: (e) => toast.error(e.message),
+      });
+    }
+  };
+
+  // ── Section dialog helpers ──
+  const openSectionCreate = () => {
+    setEditingSection(null); setSecName(""); setSecIcon("");
+    setSectionDialogOpen(true);
+  };
+
+  const openSectionEdit = (s: LibrarySection) => {
+    setEditingSection(s); setSecName(s.name); setSecIcon(s.icon);
+    setSectionDialogOpen(true);
+  };
+
+  const handleSectionSubmit = () => {
+    if (!secName.trim()) { toast.error("Введите название"); return; }
+    const payload = { name: secName, icon: secIcon || "Gem" };
+    if (editingSection) {
+      updateSection.mutate({ id: editingSection.id, data: payload }, {
+        onSuccess: () => { toast.success("Раздел обновлён"); setSectionDialogOpen(false); },
+        onError: (e) => toast.error(e.message),
+      });
+    } else {
+      createSection.mutate(payload, {
+        onSuccess: () => { toast.success("Раздел создан"); setSectionDialogOpen(false); },
+        onError: (e) => toast.error(e.message),
+      });
+    }
+  };
+
+  // ── Subsection dialog helpers ──
+  const openSubsectionCreate = (sectionId: string) => {
+    setParentSectionId(sectionId); setSubName("");
+    setSubsectionDialogOpen(true);
+  };
+
+  const handleSubsectionSubmit = () => {
+    if (!subName.trim() || !parentSectionId) { toast.error("Введите название"); return; }
+    createSubsection.mutate({ name: subName, section_id: parentSectionId }, {
+      onSuccess: () => { toast.success("Подраздел создан"); setSubsectionDialogOpen(false); },
+      onError: (e) => toast.error(e.message),
+    });
+  };
+
+  // ── Recommendation dialog helpers ──
+  const openRecCreate = () => {
+    setEditingTemplate(null); setRecTitle(""); setRecDescription("");
+    setRecCategory(""); setRecSourceId("");
+    setRecDialogOpen(true);
+  };
+
+  const openRecEdit = (t: HabitTemplate) => {
+    setEditingTemplate(t); setRecTitle(t.title); setRecDescription(t.description);
+    setRecCategory(t.category); setRecSourceId(t.source_content_id || "");
+    setRecDialogOpen(true);
+  };
+
+  const handleRecSubmit = () => {
+    if (!recTitle.trim()) { toast.error("Введите название"); return; }
+    const payload = {
+      title: recTitle, description: recDescription,
+      category: recCategory || null, source_content_id: recSourceId || null,
+    };
+    createTemplate.mutate(payload, {
+      onSuccess: () => { toast.success("Рекомендация создана"); setRecDialogOpen(false); },
+      onError: (e) => toast.error(e.message),
+    });
+  };
+
+  // ── Delete handler ──
+  const handleDeleteConfirm = () => {
+    if (!deleteTarget) return;
+    const { type, id } = deleteTarget;
+    const onSuccess = () => { toast.success("Удалено"); setDeleteTarget(null); };
+    const onError = (e: Error) => toast.error(e.message);
+
+    switch (type) {
+      case "material": deleteMaterial.mutate(id, { onSuccess, onError }); break;
+      case "section": deleteSection.mutate(id, { onSuccess, onError }); break;
+      case "subsection": deleteSubsection.mutate(id, { onSuccess, onError }); break;
+      case "template": deleteTemplate.mutate(id, { onSuccess, onError }); break;
+    }
+  };
+
+  // ── User update helper ──
+  const handleUpdateUser = (userId: string, data: Record<string, any>) => {
+    updateUser.mutate({ id: userId, data }, {
+      onSuccess: () => toast.success("Сохранено"),
+      onError: (e) => toast.error(e.message),
     });
   };
 
@@ -94,19 +272,19 @@ const AdminPage = () => {
           Админ-панель
         </h1>
         {activeTab === "materials" && (
-          <Button className="h-11 gap-2 rounded-lg" onClick={() => setMaterialDialogOpen(true)}>
+          <Button className="h-11 gap-2 rounded-lg" onClick={openMaterialCreate}>
             <Plus className="h-4 w-4" strokeWidth={1.5} />
             Добавить
           </Button>
         )}
         {activeTab === "structure" && (
-          <Button className="h-11 gap-2 rounded-lg" onClick={() => { setEditingSectionId(null); setSectionDialogOpen(true); }}>
+          <Button className="h-11 gap-2 rounded-lg" onClick={openSectionCreate}>
             <Plus className="h-4 w-4" strokeWidth={1.5} />
             Добавить раздел
           </Button>
         )}
         {activeTab === "recommendations" && (
-          <Button className="h-11 gap-2 rounded-lg" onClick={() => setRecDialogOpen(true)}>
+          <Button className="h-11 gap-2 rounded-lg" onClick={openRecCreate}>
             <Plus className="h-4 w-4" strokeWidth={1.5} />
             Добавить рекомендацию
           </Button>
@@ -132,7 +310,7 @@ const AdminPage = () => {
         ))}
       </div>
 
-      {/* Materials list */}
+      {/* ═══════════ Materials list ═══════════ */}
       {activeTab === "materials" && (
         <div className="space-y-3">
           {loadingMat ? (
@@ -141,10 +319,7 @@ const AdminPage = () => {
             materials.map((material) => {
               const sec = sections.find((s) => s.id === material.section_id);
               return (
-                <div
-                  key={material.id}
-                  className="flex items-center gap-4 rounded-lg border border-border bg-card p-4"
-                >
+                <div key={material.id} className="flex items-center gap-4 rounded-lg border border-border bg-card p-4">
                   <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-lg bg-muted">
                     {material.type === "video" ? (
                       <Video className="h-5 w-5 text-muted-foreground" strokeWidth={1.5} />
@@ -153,20 +328,21 @@ const AdminPage = () => {
                     )}
                   </div>
                   <div className="min-w-0 flex-1">
-                    <h3 className="truncate text-sm font-medium text-foreground">
-                      {material.title}
-                    </h3>
+                    <h3 className="truncate text-sm font-medium text-foreground">{material.title}</h3>
                     <p className="text-xs text-muted-foreground">
                       {sec?.name} · {new Date(material.created_at).toLocaleDateString("ru-RU")}
                     </p>
                   </div>
                   <div className="flex gap-2">
-                    <button className="rounded-lg p-2 text-muted-foreground hover:bg-muted hover:text-foreground transition-colors">
+                    <button
+                      className="rounded-lg p-2 text-muted-foreground hover:bg-muted hover:text-foreground transition-colors"
+                      onClick={() => openMaterialEdit(material)}
+                    >
                       <Pencil className="h-4 w-4" strokeWidth={1.5} />
                     </button>
                     <button
                       className="rounded-lg p-2 text-muted-foreground hover:bg-destructive/10 hover:text-destructive transition-colors"
-                      onClick={() => deleteMaterial.mutate(material.id)}
+                      onClick={() => setDeleteTarget({ type: "material", id: material.id, label: material.title })}
                     >
                       <Trash2 className="h-4 w-4" strokeWidth={1.5} />
                     </button>
@@ -178,7 +354,7 @@ const AdminPage = () => {
         </div>
       )}
 
-      {/* Structure */}
+      {/* ═══════════ Structure ═══════════ */}
       {activeTab === "structure" && (
         <div className="space-y-2">
           {loadingSec ? (
@@ -193,39 +369,25 @@ const AdminPage = () => {
                     <GripVertical className="h-4 w-4 text-muted-foreground/50 cursor-grab" />
                     {hasSubs ? (
                       <button onClick={() => toggleSection(section.id)} className="p-0.5">
-                        {isExpanded ? (
-                          <ChevronDown className="h-4 w-4 text-muted-foreground" />
-                        ) : (
-                          <ChevronRight className="h-4 w-4 text-muted-foreground" />
-                        )}
+                        {isExpanded ? <ChevronDown className="h-4 w-4 text-muted-foreground" /> : <ChevronRight className="h-4 w-4 text-muted-foreground" />}
                       </button>
-                    ) : (
-                      <div className="w-5" />
-                    )}
+                    ) : <div className="w-5" />}
                     <div className="flex-1 min-w-0">
                       <h3 className="text-sm font-medium text-foreground">{section.name}</h3>
                       <p className="text-xs text-muted-foreground">
-                        {section.subsections.length > 0
-                          ? `${section.subsections.length} подразделов`
-                          : "Без подразделов"}
+                        {section.subsections.length > 0 ? `${section.subsections.length} подразделов` : "Без подразделов"}
                         {" · "}
                         {materials.filter((m) => m.section_id === section.id && m.is_published).length} материалов
                       </p>
                     </div>
                     <div className="flex gap-1">
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        className="h-8 px-2 text-xs"
-                        onClick={() => { setParentSectionId(section.id); setSubsectionDialogOpen(true); }}
-                      >
-                        <Plus className="h-3.5 w-3.5 mr-1" />
-                        Подраздел
+                      <Button variant="ghost" size="sm" className="h-8 px-2 text-xs" onClick={() => openSubsectionCreate(section.id)}>
+                        <Plus className="h-3.5 w-3.5 mr-1" /> Подраздел
                       </Button>
-                      <button className="rounded-lg p-2 text-muted-foreground hover:bg-muted hover:text-foreground transition-colors">
+                      <button className="rounded-lg p-2 text-muted-foreground hover:bg-muted hover:text-foreground transition-colors" onClick={() => openSectionEdit(section)}>
                         <Pencil className="h-4 w-4" strokeWidth={1.5} />
                       </button>
-                      <button className="rounded-lg p-2 text-muted-foreground hover:bg-destructive/10 hover:text-destructive transition-colors">
+                      <button className="rounded-lg p-2 text-muted-foreground hover:bg-destructive/10 hover:text-destructive transition-colors" onClick={() => setDeleteTarget({ type: "section", id: section.id, label: section.name })}>
                         <Trash2 className="h-4 w-4" strokeWidth={1.5} />
                       </button>
                     </div>
@@ -239,10 +401,7 @@ const AdminPage = () => {
                           <span className="text-xs text-muted-foreground">
                             {materials.filter((m) => m.subsection_id === sub.id && m.is_published).length} мат.
                           </span>
-                          <button className="rounded p-1.5 text-muted-foreground hover:bg-muted hover:text-foreground transition-colors">
-                            <Pencil className="h-3.5 w-3.5" strokeWidth={1.5} />
-                          </button>
-                          <button className="rounded p-1.5 text-muted-foreground hover:bg-destructive/10 hover:text-destructive transition-colors">
+                          <button className="rounded p-1.5 text-muted-foreground hover:bg-destructive/10 hover:text-destructive transition-colors" onClick={() => setDeleteTarget({ type: "subsection", id: sub.id, label: sub.name })}>
                             <Trash2 className="h-3.5 w-3.5" strokeWidth={1.5} />
                           </button>
                         </div>
@@ -256,7 +415,7 @@ const AdminPage = () => {
         </div>
       )}
 
-      {/* Users list */}
+      {/* ═══════════ Users list ═══════════ */}
       {activeTab === "users" && (
         <div className="space-y-3">
           {loadingUsers ? (
@@ -277,9 +436,7 @@ const AdminPage = () => {
                     className="flex w-full items-center gap-4 p-4 text-left hover:bg-muted/30 transition-colors"
                   >
                     <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-full bg-primary/10">
-                      <span className="text-sm font-semibold text-primary">
-                        {user.name.charAt(0)}
-                      </span>
+                      <span className="text-sm font-semibold text-primary">{user.name.charAt(0)}</span>
                     </div>
                     <div className="min-w-0 flex-1">
                       <h3 className="text-sm font-medium text-foreground">{user.name}</h3>
@@ -297,11 +454,7 @@ const AdminPage = () => {
                         <div className={`h-2 w-2 rounded-full ${subColor}`} />
                         <span className="text-xs text-muted-foreground">{subLabel}</span>
                       </div>
-                      {isExpanded ? (
-                        <ChevronDown className="h-4 w-4 text-muted-foreground" />
-                      ) : (
-                        <ChevronRight className="h-4 w-4 text-muted-foreground" />
-                      )}
+                      {isExpanded ? <ChevronDown className="h-4 w-4 text-muted-foreground" /> : <ChevronRight className="h-4 w-4 text-muted-foreground" />}
                     </div>
                   </button>
 
@@ -311,13 +464,17 @@ const AdminPage = () => {
                         <div className="space-y-2">
                           <Label className="text-xs text-muted-foreground">Статус амбассадора</Label>
                           <div className="flex items-center gap-2">
-                            <Switch checked={user.ambassador_status_override} />
+                            <Switch
+                              checked={user.ambassador_status_override}
+                              onCheckedChange={(checked) => handleUpdateUser(user.id, { ambassador_status_override: checked })}
+                            />
                             <span className="text-xs text-muted-foreground">Присвоить вручную</span>
                           </div>
-                          <Select defaultValue={user.ambassador_status || ""}>
-                            <SelectTrigger className="h-9 text-sm">
-                              <SelectValue placeholder="Авто" />
-                            </SelectTrigger>
+                          <Select
+                            defaultValue={user.ambassador_status || ""}
+                            onValueChange={(val) => handleUpdateUser(user.id, { ambassador_status: val as AmbassadorStatus })}
+                          >
+                            <SelectTrigger className="h-9 text-sm"><SelectValue placeholder="Авто" /></SelectTrigger>
                             <SelectContent>
                               {AMBASSADOR_MILESTONES.map((m) => (
                                 <SelectItem key={m.status} value={m.status}>{m.label}</SelectItem>
@@ -328,20 +485,13 @@ const AdminPage = () => {
 
                         <div className="space-y-2">
                           <Label className="text-xs text-muted-foreground">Ссылка ТГ-канал (подарок 2 мес.)</Label>
-                          <div className="flex gap-2">
-                            <Input placeholder="https://t.me/+..." className="h-9 text-sm" />
-                            <Button variant="outline" size="sm" className="h-9 px-2">
-                              <Send className="h-3.5 w-3.5" />
-                            </Button>
-                          </div>
+                          <UserTgLinkField userId={user.id} onSave={handleUpdateUser} />
                         </div>
 
                         <div className="space-y-2">
                           <Label className="text-xs text-muted-foreground">Закрытый материал (подарок 3 мес.)</Label>
-                          <Select>
-                            <SelectTrigger className="h-9 text-sm">
-                              <SelectValue placeholder="Выберите материал" />
-                            </SelectTrigger>
+                          <Select onValueChange={(val) => handleUpdateUser(user.id, { gift_content_id: val })}>
+                            <SelectTrigger className="h-9 text-sm"><SelectValue placeholder="Выберите материал" /></SelectTrigger>
                             <SelectContent>
                               {materials.map((m) => (
                                 <SelectItem key={m.id} value={m.id}>{m.title}</SelectItem>
@@ -352,10 +502,11 @@ const AdminPage = () => {
 
                         <div className="space-y-2">
                           <Label className="text-xs text-muted-foreground">Физический подарок</Label>
-                          <Select defaultValue={user.delivery_form_submitted ? "submitted" : "not_submitted"}>
-                            <SelectTrigger className="h-9 text-sm">
-                              <SelectValue />
-                            </SelectTrigger>
+                          <Select
+                            defaultValue={user.delivery_form_submitted ? "submitted" : "not_submitted"}
+                            onValueChange={(val) => handleUpdateUser(user.id, { delivery_status: val })}
+                          >
+                            <SelectTrigger className="h-9 text-sm"><SelectValue /></SelectTrigger>
                             <SelectContent>
                               <SelectItem value="not_submitted">Форма не заполнена</SelectItem>
                               <SelectItem value="submitted">Форма заполнена</SelectItem>
@@ -377,23 +528,16 @@ const AdminPage = () => {
         </div>
       )}
 
-      {/* Recommendations */}
+      {/* ═══════════ Recommendations ═══════════ */}
       {activeTab === "recommendations" && (
         <div className="space-y-4">
           <div className="flex flex-col gap-3 sm:flex-row">
             <div className="relative flex-1">
               <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-              <Input
-                placeholder="Поиск по названию..."
-                className="h-10 pl-9"
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-              />
+              <Input placeholder="Поиск по названию..." className="h-10 pl-9" value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} />
             </div>
             <Select value={filterCategory} onValueChange={setFilterCategory}>
-              <SelectTrigger className="h-10 w-full sm:w-48">
-                <SelectValue placeholder="Категория" />
-              </SelectTrigger>
+              <SelectTrigger className="h-10 w-full sm:w-48"><SelectValue placeholder="Категория" /></SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">Все категории</SelectItem>
                 {sections.map((sec) => (
@@ -409,14 +553,9 @@ const AdminPage = () => {
             ) : (
               filteredTemplates.map((template) => {
                 const sec = sections.find((s) => s.id === template.category);
-                const material = template.source_content_id
-                  ? materials.find((m) => m.id === template.source_content_id)
-                  : null;
+                const material = template.source_content_id ? materials.find((m) => m.id === template.source_content_id) : null;
                 return (
-                  <div
-                    key={template.id}
-                    className="flex items-center gap-4 rounded-lg border border-border bg-card p-4"
-                  >
+                  <div key={template.id} className="flex items-center gap-4 rounded-lg border border-border bg-card p-4">
                     <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-lg bg-primary/10">
                       <Sparkles className="h-5 w-5 text-primary" strokeWidth={1.5} />
                     </div>
@@ -425,18 +564,13 @@ const AdminPage = () => {
                       <p className="text-xs text-muted-foreground">
                         {sec?.name} · {material ? `📎 ${material.title}` : "Без материала"} · {new Date(template.created_at).toLocaleDateString("ru-RU")}
                       </p>
-                      <p className="text-xs text-secondary mt-0.5">
-                        Добавили {template.adopted_count} участниц
-                      </p>
+                      <p className="text-xs text-secondary mt-0.5">Добавили {template.adopted_count} участниц</p>
                     </div>
                     <div className="flex gap-2">
-                      <button className="rounded-lg p-2 text-muted-foreground hover:bg-muted hover:text-foreground transition-colors">
+                      <button className="rounded-lg p-2 text-muted-foreground hover:bg-muted hover:text-foreground transition-colors" onClick={() => openRecEdit(template)}>
                         <Pencil className="h-4 w-4" strokeWidth={1.5} />
                       </button>
-                      <button
-                        className="rounded-lg p-2 text-muted-foreground hover:bg-destructive/10 hover:text-destructive transition-colors"
-                        onClick={() => setDeleteId(template.id)}
-                      >
+                      <button className="rounded-lg p-2 text-muted-foreground hover:bg-destructive/10 hover:text-destructive transition-colors" onClick={() => setDeleteTarget({ type: "template", id: template.id, label: template.title })}>
                         <Trash2 className="h-4 w-4" strokeWidth={1.5} />
                       </button>
                     </div>
@@ -445,28 +579,28 @@ const AdminPage = () => {
               })
             )}
             {!loadingTemplates && filteredTemplates.length === 0 && (
-              <p className="py-8 text-center text-sm text-muted-foreground">
-                Рекомендации не найдены
-              </p>
+              <p className="py-8 text-center text-sm text-muted-foreground">Рекомендации не найдены</p>
             )}
           </div>
         </div>
       )}
 
-      {/* Material dialog */}
+      {/* ═══════════ Material dialog ═══════════ */}
       <Dialog open={materialDialogOpen} onOpenChange={setMaterialDialogOpen}>
         <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-lg">
           <DialogHeader>
-            <DialogTitle className="font-heading text-xl">Новый материал</DialogTitle>
+            <DialogTitle className="font-heading text-xl">
+              {editingMaterial ? "Редактировать материал" : "Новый материал"}
+            </DialogTitle>
           </DialogHeader>
-          <form className="space-y-4">
+          <form className="space-y-4" onSubmit={(e) => { e.preventDefault(); handleMaterialSubmit(); }}>
             <div className="space-y-2">
               <Label>Название</Label>
-              <Input placeholder="Название материала" className="h-11" />
+              <Input placeholder="Название материала" className="h-11" value={matTitle} onChange={(e) => setMatTitle(e.target.value)} />
             </div>
             <div className="space-y-2">
               <Label>Описание</Label>
-              <Textarea placeholder="Описание..." rows={4} />
+              <Textarea placeholder="Описание..." rows={4} value={matDescription} onChange={(e) => setMatDescription(e.target.value)} />
             </div>
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
@@ -492,57 +626,43 @@ const AdminPage = () => {
                 </Select>
               </div>
             </div>
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label>Тип</Label>
-                <Select>
-                  <SelectTrigger className="h-11"><SelectValue placeholder="Выберите" /></SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="video">Видео</SelectItem>
-                    <SelectItem value="audio">Аудио</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
+            <div className="space-y-2">
+              <Label>Тип</Label>
+              <Select value={matType} onValueChange={(v) => setMatType(v as "video" | "audio")}>
+                <SelectTrigger className="h-11"><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="video">Видео</SelectItem>
+                  <SelectItem value="audio">Аудио</SelectItem>
+                </SelectContent>
+              </Select>
             </div>
             <div className="space-y-2">
               <Label>Ссылка на видео/аудио</Label>
-              <Input placeholder="https://..." className="h-11" />
+              <Input placeholder="https://..." className="h-11" value={matVideoUrl} onChange={(e) => setMatVideoUrl(e.target.value)} />
             </div>
-
-            <div className="space-y-3 border-t border-border pt-4">
-              <div className="flex items-center justify-between">
-                <Label className="text-base">Дополнительные материалы</Label>
-                <Button type="button" variant="outline" size="sm" className="h-8 gap-1 text-xs">
-                  <Plus className="h-3.5 w-3.5" />
-                  Добавить
-                </Button>
-              </div>
-              <p className="text-xs text-muted-foreground">
-                Добавьте дополнительные видео или аудио к этому материалу
-              </p>
-            </div>
-
-            <Button type="button" className="h-11 w-full" onClick={() => setMaterialDialogOpen(false)}>
-              Сохранить
+            <Button type="submit" className="h-11 w-full" disabled={createMaterial.isPending || updateMaterial.isPending}>
+              {(createMaterial.isPending || updateMaterial.isPending) ? "Сохранение..." : "Сохранить"}
             </Button>
           </form>
         </DialogContent>
       </Dialog>
 
-      {/* Section dialog */}
+      {/* ═══════════ Section dialog ═══════════ */}
       <Dialog open={sectionDialogOpen} onOpenChange={setSectionDialogOpen}>
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
-            <DialogTitle className="font-heading text-xl">Новый раздел</DialogTitle>
+            <DialogTitle className="font-heading text-xl">
+              {editingSection ? "Редактировать раздел" : "Новый раздел"}
+            </DialogTitle>
           </DialogHeader>
-          <form className="space-y-4">
+          <form className="space-y-4" onSubmit={(e) => { e.preventDefault(); handleSectionSubmit(); }}>
             <div className="space-y-2">
               <Label>Название</Label>
-              <Input placeholder="Название раздела" className="h-11" />
+              <Input placeholder="Название раздела" className="h-11" value={secName} onChange={(e) => setSecName(e.target.value)} />
             </div>
             <div className="space-y-2">
               <Label>Иконка</Label>
-              <Select>
+              <Select value={secIcon} onValueChange={setSecIcon}>
                 <SelectTrigger className="h-11"><SelectValue placeholder="Выберите иконку" /></SelectTrigger>
                 <SelectContent>
                   <SelectItem value="Gem">💎 Gem</SelectItem>
@@ -555,49 +675,51 @@ const AdminPage = () => {
                 </SelectContent>
               </Select>
             </div>
-            <Button type="button" className="h-11 w-full" onClick={() => setSectionDialogOpen(false)}>
-              Сохранить
+            <Button type="submit" className="h-11 w-full" disabled={createSection.isPending || updateSection.isPending}>
+              {(createSection.isPending || updateSection.isPending) ? "Сохранение..." : "Сохранить"}
             </Button>
           </form>
         </DialogContent>
       </Dialog>
 
-      {/* Subsection dialog */}
+      {/* ═══════════ Subsection dialog ═══════════ */}
       <Dialog open={subsectionDialogOpen} onOpenChange={setSubsectionDialogOpen}>
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
             <DialogTitle className="font-heading text-xl">Новый подраздел</DialogTitle>
           </DialogHeader>
-          <form className="space-y-4">
+          <form className="space-y-4" onSubmit={(e) => { e.preventDefault(); handleSubsectionSubmit(); }}>
             <div className="space-y-2">
               <Label>Название</Label>
-              <Input placeholder="Название подраздела" className="h-11" />
+              <Input placeholder="Название подраздела" className="h-11" value={subName} onChange={(e) => setSubName(e.target.value)} />
             </div>
-            <Button type="button" className="h-11 w-full" onClick={() => setSubsectionDialogOpen(false)}>
-              Сохранить
+            <Button type="submit" className="h-11 w-full" disabled={createSubsection.isPending}>
+              {createSubsection.isPending ? "Сохранение..." : "Сохранить"}
             </Button>
           </form>
         </DialogContent>
       </Dialog>
 
-      {/* Recommendation dialog */}
+      {/* ═══════════ Recommendation dialog ═══════════ */}
       <Dialog open={recDialogOpen} onOpenChange={setRecDialogOpen}>
         <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-lg">
           <DialogHeader>
-            <DialogTitle className="font-heading text-xl">Новая рекомендация</DialogTitle>
+            <DialogTitle className="font-heading text-xl">
+              {editingTemplate ? "Редактировать рекомендацию" : "Новая рекомендация"}
+            </DialogTitle>
           </DialogHeader>
-          <form className="space-y-4">
+          <form className="space-y-4" onSubmit={(e) => { e.preventDefault(); handleRecSubmit(); }}>
             <div className="space-y-2">
               <Label>Название практики</Label>
-              <Input placeholder="Например: Утренняя медитация" className="h-11" />
+              <Input placeholder="Например: Утренняя медитация" className="h-11" value={recTitle} onChange={(e) => setRecTitle(e.target.value)} />
             </div>
             <div className="space-y-2">
               <Label>Описание</Label>
-              <Textarea placeholder="Краткое описание (1-2 предложения)..." rows={3} />
+              <Textarea placeholder="Краткое описание (1-2 предложения)..." rows={3} value={recDescription} onChange={(e) => setRecDescription(e.target.value)} />
             </div>
             <div className="space-y-2">
               <Label>Раздел</Label>
-              <Select>
+              <Select value={recCategory} onValueChange={setRecCategory}>
                 <SelectTrigger className="h-11"><SelectValue placeholder="Выберите раздел" /></SelectTrigger>
                 <SelectContent>
                   {sections.map((sec) => (
@@ -608,7 +730,7 @@ const AdminPage = () => {
             </div>
             <div className="space-y-2">
               <Label>Привязка к материалу</Label>
-              <Select>
+              <Select value={recSourceId} onValueChange={setRecSourceId}>
                 <SelectTrigger className="h-11"><SelectValue placeholder="Найти материал..." /></SelectTrigger>
                 <SelectContent>
                   {materials.map((m) => (
@@ -617,28 +739,39 @@ const AdminPage = () => {
                 </SelectContent>
               </Select>
             </div>
-            <Button type="button" className="h-11 w-full" onClick={() => setRecDialogOpen(false)}>
-              Опубликовать
+            <Button type="submit" className="h-11 w-full" disabled={createTemplate.isPending}>
+              {createTemplate.isPending ? "Сохранение..." : "Опубликовать"}
             </Button>
           </form>
         </DialogContent>
       </Dialog>
 
-      {/* Delete confirmation */}
-      <AlertDialog open={!!deleteId} onOpenChange={(open) => !open && setDeleteId(null)}>
+      {/* ═══════════ Universal delete confirmation ═══════════ */}
+      <AlertDialog open={!!deleteTarget} onOpenChange={(open) => !open && setDeleteTarget(null)}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Удалить рекомендацию?</AlertDialogTitle>
-            <AlertDialogDescription>
-              Привычки участниц, добавленные из этой рекомендации, останутся как свои.
-            </AlertDialogDescription>
+            <AlertDialogTitle>{deleteTarget ? DELETE_MESSAGES[deleteTarget.type].title : ""}</AlertDialogTitle>
+            <AlertDialogDescription>{deleteTarget ? DELETE_MESSAGES[deleteTarget.type].desc : ""}</AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>Отмена</AlertDialogCancel>
-            <AlertDialogAction onClick={() => { if (deleteId) deleteTemplate.mutate(deleteId); setDeleteId(null); }}>Удалить</AlertDialogAction>
+            <AlertDialogAction onClick={handleDeleteConfirm}>Удалить</AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+    </div>
+  );
+};
+
+// Small helper component for TG link input per user
+const UserTgLinkField = ({ userId, onSave }: { userId: string; onSave: (id: string, data: Record<string, any>) => void }) => {
+  const [link, setLink] = useState("");
+  return (
+    <div className="flex gap-2">
+      <Input placeholder="https://t.me/+..." className="h-9 text-sm" value={link} onChange={(e) => setLink(e.target.value)} />
+      <Button variant="outline" size="sm" className="h-9 px-2" onClick={() => { if (link.trim()) onSave(userId, { tg_invite_link: link }); }}>
+        <Send className="h-3.5 w-3.5" />
+      </Button>
     </div>
   );
 };
