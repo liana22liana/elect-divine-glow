@@ -104,6 +104,7 @@ const ProfilePage = () => {
       <Button
         variant="outline"
         className="h-12 w-full gap-2 rounded-xl text-muted-foreground"
+        onClick={handleLogout}
       >
         <LogOut className="h-4 w-4" strokeWidth={1.5} />
         Выйти из аккаунта

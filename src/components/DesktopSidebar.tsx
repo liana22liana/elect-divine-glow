@@ -65,7 +65,10 @@ const DesktopSidebar = () => {
           </div>
           <span className="text-sm font-body text-foreground truncate">{mockUser.name}</span>
         </div>
-        <button className="flex w-full items-center gap-3 rounded-xl px-4 py-3 text-sm text-muted-foreground transition-all duration-200 hover:bg-muted hover:text-foreground">
+        <button
+          onClick={handleLogout}
+          className="flex w-full items-center gap-3 rounded-xl px-4 py-3 text-sm text-muted-foreground transition-all duration-200 hover:bg-muted hover:text-foreground"
+        >
           <LogOut className="h-5 w-5" strokeWidth={1.5} />
           Выйти
         </button>
