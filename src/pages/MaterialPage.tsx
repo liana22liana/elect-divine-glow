@@ -59,6 +59,9 @@ const MaterialPage = () => {
     // youtube.com/shorts/ID
     const shortsMatch = url.match(/(?:youtube\.com\/shorts\/)([a-zA-Z0-9_-]+)/);
     if (shortsMatch) return `https://www.youtube.com/embed/${shortsMatch[1]}`;
+    // kinescope.io/ID → kinescope.io/embed/ID
+    const kinescopeMatch = url.match(/kinescope\.io\/(?!embed\/)([a-zA-Z0-9]+)/);
+    if (kinescopeMatch) return `https://kinescope.io/embed/${kinescopeMatch[1]}`;
     // already embed or other
     return url;
   };
