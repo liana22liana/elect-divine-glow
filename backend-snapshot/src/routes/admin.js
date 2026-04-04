@@ -233,8 +233,22 @@ router.delete('/templates/:id', authMiddleware, adminOnly, async (req, res) => {
   catch (err) { console.error(err); res.status(500).json({ error: 'Server error' }); }
 });
 
-// ── Delete user (superadmin only) ──
+// ── Reset user password (superadmin only) ──
 const { superadminOnly } = require('../middleware/auth');
+const bcryptAdmin = require('bcrypt');
+
+router.post('/users/:id/reset-password', authMiddleware, superadminOnly, async (req, res) => {
+  try {
+    const { password } = req.body;
+    if (!password || password.length < 6) return res.status(400).json({ error: 'Password must be at least 6 characters' });
+    const hash = await bcryptAdmin.hash(password, 10);
+    const result = await pool.query('UPDATE users SET password_hash=$1 WHERE id=$2 RETURNING id, email, name', [hash, req.params.id]);
+    if (!result.rows.length) return res.status(404).json({ error: 'User not found' });
+    res.json({ ok: true, user: result.rows[0] });
+  } catch (err) { console.error(err); res.status(500).json({ error: 'Server error' }); }
+});
+
+// ── Delete user (superadmin only) ──
 router.delete('/users/:id', authMiddleware, superadminOnly, async (req, res) => {
   try {
     const userId = req.params.id;

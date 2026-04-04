@@ -148,6 +148,8 @@ export const api = {
       request<any>(`/admin/users/${id}`, { method: "PUT", body: JSON.stringify(data) }),
     deleteUser: (id: string) =>
       request<void>(`/admin/users/${id}`, { method: "DELETE" }),
+    resetUserPassword: (id: string, password: string) =>
+      request<any>(`/admin/users/${id}/reset-password`, { method: "POST", body: JSON.stringify({ password }) }),
     deliveryForms: () => request<any[]>("/admin/delivery-forms"),
     exportUsersUrl: () => {
       const token = getToken();

@@ -1150,11 +1150,23 @@ const AdminPage = () => {
                     </div>
                   )}
                 </div>
-                {user.role === "admin" && (
-                  <Button variant="ghost" size="sm" className="text-destructive hover:bg-destructive/10" onClick={() => handleUpdateUser(user.id, { role: "user", admin_permissions: [] })}>
-                    Убрать
-                  </Button>
-                )}
+                <div className="flex gap-2">
+                  {user.role === "admin" && (
+                    <Button variant="ghost" size="sm" className="gap-1.5" onClick={() => {
+                      const pwd = prompt('Новый пароль (мин. 6 символов):');
+                      if (pwd && pwd.length >= 6) {
+                        api.admin.resetUserPassword(user.id, pwd).then(() => toast.success('Пароль сброшен')).catch(e => toast.error(e.message));
+                      } else if (pwd) { toast.error('Минимум 6 символов'); }
+                    }}>
+                      🔑 Сбросить пароль
+                    </Button>
+                  )}
+                  {user.role === "admin" && (
+                    <Button variant="ghost" size="sm" className="text-destructive hover:bg-destructive/10" onClick={() => handleUpdateUser(user.id, { role: "user", admin_permissions: [] })}>
+                      Убрать
+                    </Button>
+                  )}
+                </div>
               </div>
             ))}
           </div>
