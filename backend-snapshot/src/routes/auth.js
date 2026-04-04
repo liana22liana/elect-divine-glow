@@ -77,6 +77,19 @@ router.post('/login', rateLimiter, async (req, res) => {
 
 router.post('/logout', (req, res) => res.json({ ok: true }));
 
+// ── Magic link auth (for club members via bot) ──
+router.get('/access/:token', async (req, res) => {
+  try {
+    const result = await pool.query(
+      `SELECT ${USER_FIELDS} FROM users WHERE access_token=$1`,
+      [req.params.token]
+    );
+    if (!result.rows.length) return res.status(404).json({ error: 'Invalid access link' });
+    const user = formatUser(result.rows[0]);
+    res.json({ user, token: generateToken(user.id) });
+  } catch (err) { console.error(err); res.status(500).json({ error: 'Server error' }); }
+});
+
 router.get('/me', authMiddleware, async (req, res) => {
   try {
     const result = await pool.query(`SELECT ${USER_FIELDS} FROM users WHERE id=$1`, [req.userId]);

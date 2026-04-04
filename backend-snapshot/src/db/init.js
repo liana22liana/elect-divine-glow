@@ -20,6 +20,8 @@ async function init() {
       admin_permissions TEXT[] DEFAULT '{}',
       tg_invite_link TEXT,
       gift_content_id INT,
+      telegram_id BIGINT UNIQUE,
+      access_token VARCHAR(64) UNIQUE,
       created_at TIMESTAMP DEFAULT NOW()
     );
 

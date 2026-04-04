@@ -19,6 +19,7 @@ app.use('/api/ambassador', require('./routes/ambassador'));
 app.use('/api/delivery-form', require('./routes/delivery'));
 app.use('/api/admin', require('./routes/admin'));
 app.use('/api/admin/invites', require('./routes/invites'));
+app.use('/api/webhook', require('./routes/webhook'));
 const path = require('path');
 
 // Serve frontend static files

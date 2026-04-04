@@ -14,6 +14,8 @@ import GoalsPage from "@/pages/GoalsPage";
 import AdminPage from "@/pages/AdminPage";
 import NotFound from "@/pages/NotFound";
 import InvitePage from "@/pages/InvitePage";
+import AccessPage from "@/pages/AccessPage";
+import SubscriptionGate from "@/components/SubscriptionGate";
 
 const queryClient = new QueryClient();
 
@@ -40,14 +42,15 @@ const AppRoutes = () => (
         </ProtectedRoute>
       }
     >
-      <Route path="/" element={<HomePage />} />
-      <Route path="/library" element={<LibraryPage />} />
-      <Route path="/material/:id" element={<MaterialPage />} />
-      <Route path="/goals" element={<GoalsPage />} />
+      <Route path="/" element={<SubscriptionGate><HomePage /></SubscriptionGate>} />
+      <Route path="/library" element={<SubscriptionGate><LibraryPage /></SubscriptionGate>} />
+      <Route path="/material/:id" element={<SubscriptionGate><MaterialPage /></SubscriptionGate>} />
+      <Route path="/goals" element={<SubscriptionGate><GoalsPage /></SubscriptionGate>} />
       <Route path="/profile" element={<ProfilePage />} />
       <Route path="/admin" element={<AdminRoute><AdminPage /></AdminRoute>} />
     </Route>
     <Route path="/invite/:token" element={<InvitePage />} />
+    <Route path="/access/:token" element={<AccessPage />} />
     <Route path="*" element={<NotFound />} />
   </Routes>
 );

@@ -50,6 +50,8 @@ export const api = {
         body: JSON.stringify({ email, password, name }),
       }),
     me: () => request<any>("/auth/me"),
+    accessLink: (token: string) =>
+      request<{ token: string; user: any }>(`/auth/access/${token}`),
   },
 
   // ── Profile ──
