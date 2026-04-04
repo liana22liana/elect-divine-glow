@@ -39,7 +39,7 @@ const LoginPage = () => {
           <div className="mx-auto mt-3 h-px w-12 bg-primary/60 rounded-full" />
         </div>
 
-        <form onSubmit={handleLogin} className="space-y-5">
+        <form onSubmit={handleLogin} className="space-y-5" autoComplete="on">
           <div className="space-y-2">
             <Label htmlFor="email" className="text-sm text-foreground">
               Email
@@ -47,6 +47,8 @@ const LoginPage = () => {
             <Input
               id="email"
               type="email"
+              name="email"
+              autoComplete="email"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               placeholder="your@email.com"
@@ -61,6 +63,8 @@ const LoginPage = () => {
             <Input
               id="password"
               type="password"
+              name="password"
+              autoComplete="current-password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               placeholder="••••••••"

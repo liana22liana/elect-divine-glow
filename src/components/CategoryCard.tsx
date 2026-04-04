@@ -1,19 +1,21 @@
 import { Link } from "react-router-dom";
-import { Gem, Heart, Sparkles, Brain, Users, Flower2, Moon, type LucideIcon } from "lucide-react";
+import { Gem, Heart, Sparkles, Brain, Users, Flower2, Moon, Sprout, type LucideIcon } from "lucide-react";
 import { useMaterials } from "@/hooks/useApiData";
 
 const iconMap: Record<string, LucideIcon> = {
-  Gem, Heart, Sparkles, Brain, Users, Flower2, Moon,
+  Gem, Heart, Sparkles, Brain, Users, Flower2, Moon, Sprout,
 };
 
-const CATEGORY_COLORS: Record<string, string> = {
-  money: "bg-amber-100 text-amber-600",
-  relationships: "bg-rose-100 text-rose-500",
-  reality: "bg-fuchsia-100 text-fuchsia-500",
-  mindset: "bg-violet-100 text-violet-500",
-  experts: "bg-orange-100 text-orange-500",
-  body: "bg-emerald-100 text-emerald-500",
-  practices: "bg-sky-100 text-sky-500",
+/** Colors keyed by icon name (stable, unlike numeric IDs) */
+const ICON_COLORS: Record<string, string> = {
+  Gem: "bg-amber-100 text-amber-600",
+  Heart: "bg-rose-100 text-rose-500",
+  Sparkles: "bg-fuchsia-100 text-fuchsia-500",
+  Brain: "bg-violet-100 text-violet-500",
+  Users: "bg-orange-100 text-orange-500",
+  Flower2: "bg-emerald-100 text-emerald-500",
+  Sprout: "bg-emerald-100 text-emerald-500",
+  Moon: "bg-sky-100 text-sky-500",
 };
 
 interface CategoryCardProps {
@@ -26,7 +28,7 @@ const CategoryCard = ({ id, label, icon }: CategoryCardProps) => {
   const Icon = iconMap[icon] || Gem;
   const { data: materials = [] } = useMaterials();
   const count = materials.filter((m) => m.section_id === id && m.is_published).length;
-  const colors = CATEGORY_COLORS[id] || "bg-secondary/15 text-secondary";
+  const colors = ICON_COLORS[icon] || "bg-secondary/15 text-secondary";
 
   return (
     <Link

@@ -2,7 +2,8 @@ import { useState, useEffect } from "react";
 import {
   Plus, Pencil, Trash2, Video, Headphones, Users as UsersIcon,
   Sparkles, Search, Layers, GripVertical, ChevronDown, ChevronRight,
-  Shield, Send, Crown,
+  Shield, Send, Crown, Download, BarChart3, Eye, EyeOff, Image,
+  Calendar, MapPin, Phone, Mail,
 } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
@@ -32,7 +33,9 @@ import {
   useCreateSection, useUpdateSection, useDeleteSection,
   useCreateSubsection, useDeleteSubsection,
   useCreateTemplate, useUpdateUser,
+  useAdminStats, useAdminDeliveryForms,
 } from "@/hooks/useApiData";
+import { api } from "@/lib/api";
 
 type TabId = AdminTabId;
 
@@ -88,6 +91,8 @@ const AdminPage = () => {
   const [matSubsectionId, setMatSubsectionId] = useState("");
   const [matType, setMatType] = useState<"video" | "audio">("video");
   const [matVideoUrl, setMatVideoUrl] = useState("");
+  const [matThumbnail, setMatThumbnail] = useState("");
+  const [matPublished, setMatPublished] = useState(true);
 
   // ── Section form state ──
   const [editingSection, setEditingSection] = useState<LibrarySection | null>(null);
@@ -109,6 +114,18 @@ const AdminPage = () => {
   const { data: materials = [], isLoading: loadingMat } = useAdminMaterials();
   const { data: users = [], isLoading: loadingUsers } = useAdminUsers();
   const { data: templates = [], isLoading: loadingTemplates } = useAdminTemplates();
+  const { data: stats } = useAdminStats();
+  const { data: deliveryForms = [] } = useAdminDeliveryForms();
+
+  // Material filters
+  const [matSearchQuery, setMatSearchQuery] = useState("");
+  const [matFilterSection, setMatFilterSection] = useState("all");
+
+  const filteredMaterials = materials.filter((m) => {
+    const matchSearch = m.title.toLowerCase().includes(matSearchQuery.toLowerCase());
+    const matchSection = matFilterSection === "all" || String(m.section_id) === matFilterSection;
+    return matchSearch && matchSection;
+  });
 
   // ── Mutations ──
   const createMaterial = useCreateMaterial();
@@ -123,7 +140,7 @@ const AdminPage = () => {
   const deleteTemplate = useDeleteTemplate();
   const updateUser = useUpdateUser();
 
-  const selectedMatSection = sections.find((s) => s.id === matSectionId);
+  const selectedMatSection = sections.find((s) => String(s.id) === matSectionId);
 
   const ALL_PERMISSION_TABS: { id: AdminTabId; label: string }[] = [
     { id: "materials", label: "Материалы" },
@@ -134,7 +151,7 @@ const AdminPage = () => {
 
   const filteredTemplates = templates.filter((t) => {
     const matchSearch = t.title.toLowerCase().includes(searchQuery.toLowerCase());
-    const matchCat = filterCategory === "all" || t.category === filterCategory;
+    const matchCat = filterCategory === "all" || String(t.category) === filterCategory;
     return matchSearch && matchCat;
   });
 
@@ -158,15 +175,15 @@ const AdminPage = () => {
   const openMaterialCreate = () => {
     setEditingMaterial(null);
     setMatTitle(""); setMatDescription(""); setMatSectionId(""); setMatSubsectionId("");
-    setMatType("video"); setMatVideoUrl("");
+    setMatType("video"); setMatVideoUrl(""); setMatThumbnail(""); setMatPublished(true);
     setMaterialDialogOpen(true);
   };
 
   const openMaterialEdit = (m: Material) => {
     setEditingMaterial(m);
     setMatTitle(m.title); setMatDescription(m.description);
-    setMatSectionId(m.section_id); setMatSubsectionId(m.subsection_id || "");
-    setMatType(m.type); setMatVideoUrl(m.video_url);
+    setMatSectionId(String(m.section_id)); setMatSubsectionId(m.subsection_id ? String(m.subsection_id) : "");
+    setMatType(m.type); setMatVideoUrl(m.video_url); setMatThumbnail(m.thumbnail_url || ""); setMatPublished(m.is_published !== false);
     setMaterialDialogOpen(true);
   };
 
@@ -178,6 +195,7 @@ const AdminPage = () => {
     const payload = {
       title: matTitle, description: matDescription, section_id: matSectionId,
       subsection_id: matSubsectionId || null, type: matType, video_url: matVideoUrl,
+      thumbnail_url: matThumbnail || null, is_published: matPublished,
     };
     if (editingMaterial) {
       updateMaterial.mutate({ id: editingMaterial.id, data: payload }, {
@@ -305,6 +323,15 @@ const AdminPage = () => {
             Добавить рекомендацию
           </Button>
         )}
+        {activeTab === "users" && (
+          <Button variant="outline" className="h-11 gap-2 rounded-lg" onClick={() => {
+            const url = api.admin.exportUsersUrl();
+            window.open(url, '_blank');
+          }}>
+            <Download className="h-4 w-4" strokeWidth={1.5} />
+            CSV
+          </Button>
+        )}
       </div>
 
       {/* Tabs */}
@@ -328,12 +355,28 @@ const AdminPage = () => {
 
       {/* ═══════════ Materials list ═══════════ */}
       {activeTab === "materials" && (
-        <div className="space-y-3">
+        <div className="space-y-4">
+          <div className="flex flex-col gap-3 sm:flex-row">
+            <div className="relative flex-1">
+              <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+              <Input placeholder="Поиск по названию..." className="h-10 pl-9" value={matSearchQuery} onChange={(e) => setMatSearchQuery(e.target.value)} />
+            </div>
+            <Select value={matFilterSection} onValueChange={setMatFilterSection}>
+              <SelectTrigger className="h-10 w-full sm:w-48"><SelectValue placeholder="Раздел" /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Все разделы</SelectItem>
+                {sections.map((sec) => (
+                  <SelectItem key={sec.id} value={String(sec.id)}>{sec.name}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+          <div className="space-y-3">
           {loadingMat ? (
             Array.from({ length: 4 }).map((_, i) => <Skeleton key={i} className="h-16 w-full rounded-lg" />)
           ) : (
-            materials.map((material) => {
-              const sec = sections.find((s) => s.id === material.section_id);
+            filteredMaterials.map((material) => {
+              const sec = sections.find((s) => String(s.id) === String(material.section_id));
               return (
                 <div key={material.id} className="flex items-center gap-4 rounded-lg border border-border bg-card p-4">
                   <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-lg bg-muted">
@@ -349,7 +392,12 @@ const AdminPage = () => {
                       {sec?.name} · {new Date(material.created_at).toLocaleDateString("ru-RU")}
                     </p>
                   </div>
-                  <div className="flex gap-2">
+                  <div className="flex items-center gap-2">
+                    {material.is_published === false && (
+                      <span className="flex items-center gap-1 rounded-full bg-yellow-100 px-2 py-0.5 text-[10px] font-medium text-yellow-700">
+                        <EyeOff className="h-3 w-3" /> Черновик
+                      </span>
+                    )}
                     <button
                       className="rounded-lg p-2 text-muted-foreground hover:bg-muted hover:text-foreground transition-colors"
                       onClick={() => openMaterialEdit(material)}
@@ -367,6 +415,10 @@ const AdminPage = () => {
               );
             })
           )}
+          {!loadingMat && filteredMaterials.length === 0 && (
+            <p className="py-8 text-center text-sm text-muted-foreground">Материалы не найдены</p>
+          )}
+          </div>
         </div>
       )}
 
@@ -393,7 +445,7 @@ const AdminPage = () => {
                       <p className="text-xs text-muted-foreground">
                         {section.subsections.length > 0 ? `${section.subsections.length} подразделов` : "Без подразделов"}
                         {" · "}
-                        {materials.filter((m) => m.section_id === section.id && m.is_published).length} материалов
+                        {materials.filter((m) => String(m.section_id) === String(section.id) && m.is_published).length} материалов
                       </p>
                     </div>
                     <div className="flex gap-1">
@@ -415,7 +467,7 @@ const AdminPage = () => {
                           <GripVertical className="h-3.5 w-3.5 text-muted-foreground/40 cursor-grab" />
                           <span className="flex-1 text-sm text-foreground">{sub.name}</span>
                           <span className="text-xs text-muted-foreground">
-                            {materials.filter((m) => m.subsection_id === sub.id && m.is_published).length} мат.
+                            {materials.filter((m) => String(m.subsection_id) === String(sub.id) && m.is_published).length} мат.
                           </span>
                           <button className="rounded p-1.5 text-muted-foreground hover:bg-destructive/10 hover:text-destructive transition-colors" onClick={() => setDeleteTarget({ type: "subsection", id: sub.id, label: sub.name })}>
                             <Trash2 className="h-3.5 w-3.5" strokeWidth={1.5} />
@@ -522,7 +574,7 @@ const AdminPage = () => {
                             <SelectTrigger className="h-9 text-sm"><SelectValue placeholder="Выберите материал" /></SelectTrigger>
                             <SelectContent>
                               {materials.map((m) => (
-                                <SelectItem key={m.id} value={m.id}>{m.title}</SelectItem>
+                                <SelectItem key={m.id} value={String(m.id)}>{m.title}</SelectItem>
                               ))}
                             </SelectContent>
                           </Select>
@@ -543,6 +595,31 @@ const AdminPage = () => {
                           </Select>
                         </div>
                       </div>
+
+                      <div className="grid gap-4 sm:grid-cols-2">
+                        <div className="space-y-2">
+                          <Label className="text-xs text-muted-foreground flex items-center gap-1"><Calendar className="h-3 w-3" /> Начало подписки</Label>
+                          <Input type="date" className="h-9 text-sm" defaultValue={user.subscription_start_date ? new Date(user.subscription_start_date).toISOString().split('T')[0] : ''} onChange={(e) => handleUpdateUser(user.id, { subscription_start: e.target.value })} />
+                        </div>
+                        <div className="space-y-2">
+                          <Label className="text-xs text-muted-foreground flex items-center gap-1"><Calendar className="h-3 w-3" /> Конец подписки</Label>
+                          <Input type="date" className="h-9 text-sm" defaultValue={user.subscription_end_date ? new Date(user.subscription_end_date).toISOString().split('T')[0] : ''} onChange={(e) => handleUpdateUser(user.id, { subscription_end: e.target.value })} />
+                        </div>
+                      </div>
+
+                      {(() => {
+                        const form = deliveryForms.find((f: any) => String(f.user_id) === String(user.id));
+                        if (!form) return null;
+                        return (
+                          <div className="rounded-lg border border-border bg-muted/20 p-3 space-y-1">
+                            <p className="text-xs font-medium text-foreground flex items-center gap-1"><MapPin className="h-3 w-3" /> Адрес доставки</p>
+                            <p className="text-xs text-muted-foreground">{form.name}</p>
+                            {form.phone && <p className="text-xs text-muted-foreground flex items-center gap-1"><Phone className="h-3 w-3" /> {form.phone}</p>}
+                            {form.email && <p className="text-xs text-muted-foreground flex items-center gap-1"><Mail className="h-3 w-3" /> {form.email}</p>}
+                            <p className="text-xs text-muted-foreground">{[form.city, form.street, form.postal_code].filter(Boolean).join(', ')}</p>
+                          </div>
+                        );
+                      })()}
 
                       <p className="text-xs text-muted-foreground">
                         Дата вступления: {new Date(user.created_at).toLocaleDateString("ru-RU")}
@@ -618,7 +695,7 @@ const AdminPage = () => {
               <SelectContent>
                 <SelectItem value="all">Все категории</SelectItem>
                 {sections.map((sec) => (
-                  <SelectItem key={sec.id} value={sec.id}>{sec.name}</SelectItem>
+                  <SelectItem key={sec.id} value={String(sec.id)}>{sec.name}</SelectItem>
                 ))}
               </SelectContent>
             </Select>
@@ -630,7 +707,7 @@ const AdminPage = () => {
             ) : (
               filteredTemplates.map((template) => {
                 const sec = sections.find((s) => s.id === template.category);
-                const material = template.source_content_id ? materials.find((m) => m.id === template.source_content_id) : null;
+                const material = template.source_content_id ? materials.find((m) => String(m.id) === String(template.source_content_id)) : null;
                 return (
                   <div key={template.id} className="flex items-center gap-4 rounded-lg border border-border bg-card p-4">
                     <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-lg bg-primary/10">
@@ -686,7 +763,7 @@ const AdminPage = () => {
                   <SelectTrigger className="h-11"><SelectValue placeholder="Выберите" /></SelectTrigger>
                   <SelectContent>
                     {sections.map((sec) => (
-                      <SelectItem key={sec.id} value={sec.id}>{sec.name}</SelectItem>
+                      <SelectItem key={sec.id} value={String(sec.id)}>{sec.name}</SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
@@ -697,7 +774,7 @@ const AdminPage = () => {
                   <SelectTrigger className="h-11"><SelectValue placeholder={selectedMatSection?.subsections.length ? "Выберите" : "—"} /></SelectTrigger>
                   <SelectContent>
                     {selectedMatSection?.subsections.map((sub) => (
-                      <SelectItem key={sub.id} value={sub.id}>{sub.name}</SelectItem>
+                      <SelectItem key={sub.id} value={String(sub.id)}>{sub.name}</SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
@@ -716,6 +793,17 @@ const AdminPage = () => {
             <div className="space-y-2">
               <Label>Ссылка на видео/аудио</Label>
               <Input placeholder="https://..." className="h-11" value={matVideoUrl} onChange={(e) => setMatVideoUrl(e.target.value)} />
+            </div>
+            <div className="space-y-2">
+              <Label>Обложка (URL)</Label>
+              <Input placeholder="https://..." className="h-11" value={matThumbnail} onChange={(e) => setMatThumbnail(e.target.value)} />
+            </div>
+            <div className="flex items-center justify-between rounded-lg border border-border p-3">
+              <div className="flex items-center gap-2">
+                {matPublished ? <Eye className="h-4 w-4 text-primary" /> : <EyeOff className="h-4 w-4 text-muted-foreground" />}
+                <Label>Опубликован</Label>
+              </div>
+              <Switch checked={matPublished} onCheckedChange={setMatPublished} />
             </div>
             <Button type="submit" className="h-11 w-full" disabled={createMaterial.isPending || updateMaterial.isPending}>
               {(createMaterial.isPending || updateMaterial.isPending) ? "Сохранение..." : "Сохранить"}
@@ -800,7 +888,7 @@ const AdminPage = () => {
                 <SelectTrigger className="h-11"><SelectValue placeholder="Выберите раздел" /></SelectTrigger>
                 <SelectContent>
                   {sections.map((sec) => (
-                    <SelectItem key={sec.id} value={sec.id}>{sec.name}</SelectItem>
+                    <SelectItem key={sec.id} value={String(sec.id)}>{sec.name}</SelectItem>
                   ))}
                 </SelectContent>
               </Select>
@@ -811,7 +899,7 @@ const AdminPage = () => {
                 <SelectTrigger className="h-11"><SelectValue placeholder="Найти материал..." /></SelectTrigger>
                 <SelectContent>
                   {materials.map((m) => (
-                    <SelectItem key={m.id} value={m.id}>{m.title}</SelectItem>
+                    <SelectItem key={m.id} value={String(m.id)}>{m.title}</SelectItem>
                   ))}
                 </SelectContent>
               </Select>

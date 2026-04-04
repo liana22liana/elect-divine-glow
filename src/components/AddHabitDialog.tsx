@@ -20,7 +20,7 @@ import {
 } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
 import { cn } from "@/lib/utils";
-import { useSections, useAdminTemplates, useMaterials, useCreateHabit } from "@/hooks/useApiData";
+import { useSections, usePublicTemplates, useMaterials, useCreateHabit } from "@/hooks/useApiData";
 
 interface AddHabitDialogProps {
   open: boolean;
@@ -37,7 +37,8 @@ const AddHabitDialog = ({ open, onOpenChange }: AddHabitDialogProps) => {
   const [selectedTemplate, setSelectedTemplate] = useState<string | null>(null);
 
   const { data: sections = [] } = useSections();
-  const { data: templates = [] } = useAdminTemplates();
+  const [templateFilter, setTemplateFilter] = useState<string>("all");
+  const { data: templates = [] } = usePublicTemplates();
   const { data: materials = [] } = useMaterials();
   const createHabit = useCreateHabit();
 
@@ -73,9 +74,10 @@ const AddHabitDialog = ({ open, onOpenChange }: AddHabitDialogProps) => {
         </DialogHeader>
 
         <Tabs defaultValue="custom" className="w-full">
-          <TabsList className="grid w-full grid-cols-2">
-            <TabsTrigger value="custom">Своя привычка</TabsTrigger>
+          <TabsList className="grid w-full grid-cols-3">
+            <TabsTrigger value="custom">Своя</TabsTrigger>
             <TabsTrigger value="club">Из клуба</TabsTrigger>
+            <TabsTrigger value="library">Из библиотеки</TabsTrigger>
           </TabsList>
 
           <TabsContent value="custom" className="space-y-4 pt-2">
@@ -174,10 +176,19 @@ const AddHabitDialog = ({ open, onOpenChange }: AddHabitDialogProps) => {
           </TabsContent>
 
           <TabsContent value="club" className="space-y-3 pt-2">
-            {templates.map((template) => {
-              const section = sections.find((s) => s.id === template.category);
+            <Select value={templateFilter} onValueChange={setTemplateFilter}>
+              <SelectTrigger className="h-10"><SelectValue placeholder="Все разделы" /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Все разделы</SelectItem>
+                {sections.map((sec) => (
+                  <SelectItem key={sec.id} value={String(sec.id)}>{sec.name}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            {templates.filter((t) => templateFilter === "all" || String(t.category) === templateFilter).map((template) => {
+              const section = sections.find((s) => String(s.id) === String(template.category));
               const material = template.source_content_id
-                ? materials.find((m) => m.id === template.source_content_id)
+                ? materials.find((m) => String(m.id) === String(template.source_content_id))
                 : null;
 
               return (
@@ -227,6 +238,84 @@ const AddHabitDialog = ({ open, onOpenChange }: AddHabitDialogProps) => {
                 </div>
               );
             })}
+            {templates.length === 0 && (
+              <p className="py-6 text-center text-sm text-muted-foreground">Пока нет рекомендаций от клуба</p>
+            )}
+          </TabsContent>
+          <TabsContent value="library" className="space-y-3 pt-2">
+            <Select value={templateFilter} onValueChange={setTemplateFilter}>
+              <SelectTrigger className="h-10"><SelectValue placeholder="Все разделы" /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Все разделы</SelectItem>
+                {sections.map((sec) => (
+                  <SelectItem key={sec.id} value={String(sec.id)}>{sec.name}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            {materials
+              .filter((m) => m.is_published)
+              .filter((m) => templateFilter === "all" || String(m.section_id) === templateFilter)
+              .map((material) => {
+                const section = sections.find((s) => String(s.id) === String(material.section_id));
+                const subsection = section?.subsections?.find(
+                  (sub) => String(sub.id) === String(material.subsection_id)
+                );
+                return (
+                  <div
+                    key={material.id}
+                    className="rounded-xl border border-border bg-card p-4 space-y-2"
+                  >
+                    <div className="flex items-start justify-between gap-3">
+                      <div>
+                        <h4 className="font-heading text-base font-semibold text-foreground">
+                          {material.title}
+                        </h4>
+                        {material.description && (
+                          <p className="text-xs text-muted-foreground mt-0.5 line-clamp-2">
+                            {material.description}
+                          </p>
+                        )}
+                      </div>
+                      <div className="flex flex-col items-end gap-1 flex-shrink-0">
+                        {section && (
+                          <span className="rounded-full bg-secondary/10 px-2.5 py-0.5 text-xs font-medium text-secondary">
+                            {section.name}
+                          </span>
+                        )}
+                        {subsection && (
+                          <span className="rounded-full bg-muted px-2.5 py-0.5 text-xs text-muted-foreground">
+                            {subsection.name}
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                      <span>{material.type === "video" ? "🎬 Видео" : "🎧 Аудио"}</span>
+                    </div>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="h-9 w-full gap-1.5 rounded-lg"
+                      onClick={() => {
+                        createHabit.mutate({
+                          title: material.title,
+                          frequency_type: "daily",
+                          frequency_count: 1,
+                          category: material.section_id,
+                          source_content_id: material.id,
+                        });
+                        onOpenChange(false);
+                      }}
+                    >
+                      <Plus className="h-3.5 w-3.5" />
+                      Добавить в мои цели
+                    </Button>
+                  </div>
+                );
+              })}
+            {materials.filter((m) => m.is_published).length === 0 && (
+              <p className="py-6 text-center text-sm text-muted-foreground">В библиотеке пока нет материалов</p>
+            )}
           </TabsContent>
         </Tabs>
       </DialogContent>

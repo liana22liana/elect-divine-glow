@@ -5,8 +5,8 @@ import { cn } from "@/lib/utils";
 import AmbassadorCongratDialog from "./AmbassadorCongratDialog";
 
 interface AmbassadorTimelineProps {
-  currentStatus: AmbassadorStatus | null;
-  subscriptionStartDate: string;
+  currentStatus: AmbassadorStatus | string | null;
+  subscriptionStartDate: string | null;
   deliveryFormSubmitted: boolean;
 }
 
@@ -21,11 +21,16 @@ function daysBetween(a: string, b: string) {
   return Math.floor((new Date(b).getTime() - new Date(a).getTime()) / (1000 * 60 * 60 * 24));
 }
 
-const AmbassadorTimeline = ({ currentStatus, subscriptionStartDate, deliveryFormSubmitted }: AmbassadorTimelineProps) => {
+const AmbassadorTimeline = ({ currentStatus: rawStatus, subscriptionStartDate, deliveryFormSubmitted }: AmbassadorTimelineProps) => {
   const [selectedMilestone, setSelectedMilestone] = useState<number | null>(null);
+  // DB stores 'none' for no status — normalize to null
+  const currentStatus: AmbassadorStatus | null =
+    rawStatus && rawStatus !== "none" ? (rawStatus as AmbassadorStatus) : null;
   const currentIndex = getStatusIndex(currentStatus);
   const today = new Date().toISOString().split("T")[0];
-  const totalDays = Math.max(0, daysBetween(subscriptionStartDate, today));
+  const totalDays = subscriptionStartDate
+    ? Math.max(0, daysBetween(subscriptionStartDate, today))
+    : 0;
 
   const nextMilestoneIdx = AMBASSADOR_MILESTONES.findIndex(
     (m) => getStatusIndex(m.status) > currentIndex
@@ -115,25 +120,31 @@ const AmbassadorTimeline = ({ currentStatus, subscriptionStartDate, deliveryForm
               let progressText = "";
               if (isNext) {
                 const targetDays = TARGET_DAYS[idx];
-                const displayDays = Math.min(totalDays, targetDays);
-                if (totalDays < targetDays) {
-                  progressText = `${displayDays} из ${targetDays} дней`;
+                if (totalDays >= targetDays) {
+                  progressText = "✨ Готово к открытию!";
+                } else {
+                  const daysLeft = targetDays - totalDays;
+                  const daysWord = daysLeft === 1 ? "день" : daysLeft < 5 ? "дня" : "дней";
+                  progressText = `Ещё ${daysLeft} ${daysWord}`;
                 }
               }
+
+              // If days exceed target but status not updated — show as visually ready
+              const daysAchieved = !isAchieved && totalDays >= TARGET_DAYS[idx];
 
               return (
                 <div key={milestone.status} className="relative z-10 flex flex-col items-center w-1/4">
                   <button
-                    onClick={() => isAchieved ? setSelectedMilestone(idx) : null}
-                    disabled={isFuture}
+                    onClick={() => (isAchieved || daysAchieved) ? setSelectedMilestone(idx) : null}
+                    disabled={isFuture && !daysAchieved}
                     className={cn(
                       "flex h-10 w-10 items-center justify-center rounded-full border-2 transition-all",
-                      isAchieved && "border-primary bg-primary text-primary-foreground cursor-pointer hover:scale-110",
-                      isNext && "animate-pulse border-primary bg-primary/20 text-primary",
-                      isFuture && !isNext && "border-border bg-muted text-muted-foreground cursor-not-allowed opacity-50"
+                      (isAchieved || daysAchieved) && "border-primary bg-primary text-primary-foreground cursor-pointer hover:scale-110",
+                      isNext && !daysAchieved && "animate-pulse border-primary bg-primary/20 text-primary",
+                      isFuture && !isNext && !daysAchieved && "border-border bg-muted text-muted-foreground cursor-not-allowed opacity-50"
                     )}
                   >
-                    {isAchieved ? (
+                    {(isAchieved || daysAchieved) ? (
                       <Check className="h-5 w-5" strokeWidth={2} />
                     ) : (
                       <Lock className="h-4 w-4" strokeWidth={1.5} />
@@ -141,7 +152,7 @@ const AmbassadorTimeline = ({ currentStatus, subscriptionStartDate, deliveryForm
                   </button>
                   <span className={cn(
                     "mt-2 text-sm font-medium text-center",
-                    isAchieved ? "text-foreground" : "text-muted-foreground"
+                    (isAchieved || daysAchieved) ? "text-foreground" : "text-muted-foreground"
                   )}>
                     {milestone.label}
                   </span>
@@ -171,11 +182,16 @@ const AmbassadorTimeline = ({ currentStatus, subscriptionStartDate, deliveryForm
             let progressText = "";
             if (isNext) {
               const targetDays = TARGET_DAYS[idx];
-              const displayDays = Math.min(totalDays, targetDays);
-              if (totalDays < targetDays) {
-                progressText = `${displayDays} из ${targetDays} дней`;
+              if (totalDays >= targetDays) {
+                progressText = "✨ Готово к открытию!";
+              } else {
+                const daysLeft = targetDays - totalDays;
+                const daysWord = daysLeft === 1 ? "день" : daysLeft < 5 ? "дня" : "дней";
+                progressText = `Ещё ${daysLeft} ${daysWord}`;
               }
             }
+
+            const daysAchieved = !isAchieved && totalDays >= TARGET_DAYS[idx];
 
             const segmentFill = !isLast ? calcMobileSegmentFill(idx) : 0;
 
@@ -183,16 +199,16 @@ const AmbassadorTimeline = ({ currentStatus, subscriptionStartDate, deliveryForm
               <div key={milestone.status} className="flex gap-3">
                 <div className="flex flex-col items-center">
                   <button
-                    onClick={() => isAchieved ? setSelectedMilestone(idx) : null}
-                    disabled={isFuture}
+                    onClick={() => (isAchieved || daysAchieved) ? setSelectedMilestone(idx) : null}
+                    disabled={isFuture && !daysAchieved}
                     className={cn(
                       "flex h-9 w-9 items-center justify-center rounded-full border-2 transition-all flex-shrink-0",
-                      isAchieved && "border-primary bg-primary text-primary-foreground cursor-pointer",
-                      isNext && "animate-pulse border-primary bg-primary/20 text-primary",
-                      isFuture && !isNext && "border-border bg-muted text-muted-foreground cursor-not-allowed opacity-50"
+                      (isAchieved || daysAchieved) && "border-primary bg-primary text-primary-foreground cursor-pointer",
+                      isNext && !daysAchieved && "animate-pulse border-primary bg-primary/20 text-primary",
+                      isFuture && !isNext && !daysAchieved && "border-border bg-muted text-muted-foreground cursor-not-allowed opacity-50"
                     )}
                   >
-                    {isAchieved ? (
+                    {(isAchieved || daysAchieved) ? (
                       <Check className="h-4 w-4" strokeWidth={2} />
                     ) : (
                       <Lock className="h-3.5 w-3.5" strokeWidth={1.5} />
@@ -210,7 +226,7 @@ const AmbassadorTimeline = ({ currentStatus, subscriptionStartDate, deliveryForm
                 <div className="pb-6 pt-1">
                   <span className={cn(
                     "text-sm font-medium",
-                    isAchieved ? "text-foreground" : "text-muted-foreground"
+                    (isAchieved || daysAchieved) ? "text-foreground" : "text-muted-foreground"
                   )}>
                     {milestone.label}
                     <span className="text-xs text-muted-foreground ml-1.5">({milestone.months} мес.)</span>

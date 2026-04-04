@@ -1,4 +1,6 @@
-const API_BASE = "http://83.147.247.183:3000/api";
+const API_BASE = window.location.hostname === "localhost"
+  ? "http://localhost:3000/api"
+  : "/api";
 
 function getToken(): string | null {
   return localStorage.getItem("elect_token");
@@ -95,6 +97,12 @@ export const api = {
         method: "POST",
         body: JSON.stringify({ date }),
       }),
+    toggleLog: (habitId: string, date: string, completed: boolean) =>
+      request<any>(`/habits/${habitId}/logs`, {
+        method: "POST",
+        body: JSON.stringify({ date, completed }),
+      }),
+    templates: () => request<any[]>("/habits/templates"),
   },
 
   // ── Habit Templates ──
@@ -121,9 +129,19 @@ export const api = {
 
   // ── Admin ──
   admin: {
+    stats: () => request<any>("/admin/stats"),
     users: () => request<any[]>("/admin/users"),
     updateUser: (id: string, data: Record<string, any>) =>
       request<any>(`/admin/users/${id}`, { method: "PUT", body: JSON.stringify(data) }),
+    deliveryForms: () => request<any[]>("/admin/delivery-forms"),
+    exportUsersUrl: () => {
+      const token = getToken();
+      return `${API_BASE}/admin/users/export${token ? `?token=${token}` : ''}`;
+    },
+    addAdditionalMaterial: (materialId: string, data: Record<string, any>) =>
+      request<any>(`/admin/materials/${materialId}/additional`, { method: "POST", body: JSON.stringify(data) }),
+    deleteAdditionalMaterial: (id: string) =>
+      request<void>(`/admin/additional/${id}`, { method: "DELETE" }),
     sections: {
       create: (data: Record<string, any>) =>
         request<any>("/admin/sections", { method: "POST", body: JSON.stringify(data) }),

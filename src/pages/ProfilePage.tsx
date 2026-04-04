@@ -77,7 +77,7 @@ const ProfilePage = () => {
             <div className={`h-2.5 w-2.5 rounded-full ${sub.color}`} />
             <span className="text-sm text-foreground">{sub.label}</span>
           </div>
-          {profile.subscription_status === "active" && (
+          {profile.subscription_status === "active" && profile.subscription_start_date && (
             <p className="text-sm text-muted-foreground">
               Следующее списание:{" "}
               {new Date(

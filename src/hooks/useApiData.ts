@@ -81,12 +81,42 @@ export const useMarkHabitLog = () => {
   });
 };
 
+export const useToggleHabitLog = () => {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ habitId, date, completed }: { habitId: string; date: string; completed: boolean }) =>
+      api.habits.toggleLog(habitId, date, completed),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["habitLogs"] }),
+  });
+};
+
+export const useUpdateHabit = () => {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, data }: { id: string; data: Record<string, any> }) =>
+      api.habits.update(id, data),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["habits"] }),
+  });
+};
+
 // ── Admin ──
 
 export const useAdminUsers = () =>
   useQuery<UserProfile[]>({
     queryKey: ["admin", "users"],
     queryFn: api.admin.users,
+  });
+
+export const useAdminStats = () =>
+  useQuery({
+    queryKey: ["admin", "stats"],
+    queryFn: api.admin.stats,
+  });
+
+export const useAdminDeliveryForms = () =>
+  useQuery({
+    queryKey: ["admin", "deliveryForms"],
+    queryFn: api.admin.deliveryForms,
   });
 
 export const useAdminMaterials = () =>
@@ -99,6 +129,12 @@ export const useAdminTemplates = () =>
   useQuery<HabitTemplate[]>({
     queryKey: ["admin", "templates"],
     queryFn: api.templates.list,
+  });
+
+export const usePublicTemplates = () =>
+  useQuery<HabitTemplate[]>({
+    queryKey: ["templates", "public"],
+    queryFn: api.habits.templates,
   });
 
 // ── Admin Mutations ──
