@@ -131,6 +131,7 @@ export const api = {
   admin: {
     stats: () => request<any>("/admin/stats"),
     users: () => request<any[]>("/admin/users"),
+    materials: () => request<any[]>("/admin/materials"),
     updateUser: (id: string, data: Record<string, any>) =>
       request<any>(`/admin/users/${id}`, { method: "PUT", body: JSON.stringify(data) }),
     deleteUser: (id: string) =>

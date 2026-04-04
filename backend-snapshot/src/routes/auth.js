@@ -4,6 +4,34 @@ const jwt = require('jsonwebtoken');
 const pool = require('../db/pool');
 const { authMiddleware } = require('../middleware/auth');
 
+// Simple in-memory rate limiter for auth endpoints
+const attempts = new Map(); // ip -> { count, resetAt }
+const RATE_LIMIT = 10; // max attempts
+const RATE_WINDOW = 15 * 60 * 1000; // 15 minutes
+
+function rateLimiter(req, res, next) {
+  const ip = req.ip || req.connection.remoteAddress;
+  const now = Date.now();
+  const entry = attempts.get(ip);
+  if (entry && entry.resetAt > now) {
+    if (entry.count >= RATE_LIMIT) {
+      return res.status(429).json({ error: 'Too many attempts, try again later' });
+    }
+    entry.count++;
+  } else {
+    attempts.set(ip, { count: 1, resetAt: now + RATE_WINDOW });
+  }
+  next();
+}
+
+// Cleanup stale entries every 30 min
+setInterval(() => {
+  const now = Date.now();
+  for (const [ip, entry] of attempts) {
+    if (entry.resetAt <= now) attempts.delete(ip);
+  }
+}, 30 * 60 * 1000);
+
 const USER_FIELDS = 'id, email, name, avatar_url, subscription_status, subscription_start AS subscription_start_date, subscription_end AS subscription_end_date, ambassador_status, ambassador_status_override, delivery_form_submitted, role, admin_permissions, created_at';
 
 function generateToken(userId) {
@@ -17,7 +45,7 @@ function formatUser(row) {
   };
 }
 
-router.post('/register', async (req, res) => {
+router.post('/register', rateLimiter, async (req, res) => {
   try {
     const { email, password, name } = req.body;
     if (!email || !password) return res.status(400).json({ error: 'Email and password required' });
@@ -25,7 +53,7 @@ router.post('/register', async (req, res) => {
     if (exists.rows.length) return res.status(409).json({ error: 'Email already registered' });
     const hash = await bcrypt.hash(password, 10);
     const result = await pool.query(
-      `INSERT INTO users (email, password_hash, name, subscription_status, subscription_start) VALUES ($1,$2,$3,'active',NOW()) RETURNING ${USER_FIELDS}`,
+      `INSERT INTO users (email, password_hash, name, subscription_status) VALUES ($1,$2,$3,'inactive') RETURNING ${USER_FIELDS}`,
       [email.toLowerCase().trim(), hash, name || '']
     );
     const user = formatUser(result.rows[0]);
@@ -33,7 +61,7 @@ router.post('/register', async (req, res) => {
   } catch (err) { console.error(err); res.status(500).json({ error: 'Server error' }); }
 });
 
-router.post('/login', async (req, res) => {
+router.post('/login', rateLimiter, async (req, res) => {
   try {
     const { email, password } = req.body;
     if (!email || !password) return res.status(400).json({ error: 'Email and password required' });

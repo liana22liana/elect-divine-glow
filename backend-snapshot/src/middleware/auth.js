@@ -3,8 +3,9 @@ const pool = require('../db/pool');
 
 async function authMiddleware(req, res, next) {
   const header = req.headers.authorization;
-  if (!header) return res.status(401).json({ error: 'No token' });
-  const token = header.replace('Bearer ', '');
+  const queryToken = req.query.token;
+  if (!header && !queryToken) return res.status(401).json({ error: 'No token' });
+  const token = header ? header.replace('Bearer ', '') : queryToken;
   try {
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
     req.userId = decoded.userId;

@@ -1,8 +1,131 @@
 require('dotenv').config();
 const pool = require('./pool');
+
 async function init() {
-  await pool.query(`CREATE TABLE IF NOT EXISTS users (id SERIAL PRIMARY KEY, email VARCHAR(255) UNIQUE NOT NULL, password_hash TEXT NOT NULL, name VARCHAR(255) DEFAULT '', avatar_url TEXT, subscription_status VARCHAR(50) DEFAULT 'inactive', subscription_start TIMESTAMP, subscription_end TIMESTAMP, ambassador_status VARCHAR(50) DEFAULT 'none', ambassador_status_override VARCHAR(50), delivery_form_submitted BOOLEAN DEFAULT false, is_admin BOOLEAN DEFAULT false, created_at TIMESTAMP DEFAULT NOW()); CREATE TABLE IF NOT EXISTS library_sections (id SERIAL PRIMARY KEY, title VARCHAR(255) NOT NULL, order_index INT DEFAULT 0); CREATE TABLE IF NOT EXISTS library_subsections (id SERIAL PRIMARY KEY, section_id INT REFERENCES library_sections(id) ON DELETE CASCADE, title VARCHAR(255) NOT NULL, order_index INT DEFAULT 0); CREATE TABLE IF NOT EXISTS materials (id SERIAL PRIMARY KEY, title VARCHAR(255) NOT NULL, description TEXT, section_id INT REFERENCES library_sections(id), subsection_id INT REFERENCES library_subsections(id), type VARCHAR(50) DEFAULT 'video', video_url TEXT, thumbnail_url TEXT, is_published BOOLEAN DEFAULT true, created_at TIMESTAMP DEFAULT NOW()); CREATE TABLE IF NOT EXISTS additional_materials (id SERIAL PRIMARY KEY, content_id INT REFERENCES materials(id) ON DELETE CASCADE, title VARCHAR(255), url TEXT, order_index INT DEFAULT 0); CREATE TABLE IF NOT EXISTS habit_templates (id SERIAL PRIMARY KEY, title VARCHAR(255) NOT NULL, description TEXT, category VARCHAR(100), source_content_id INT REFERENCES materials(id), adopted_count INT DEFAULT 0); CREATE TABLE IF NOT EXISTS habits (id SERIAL PRIMARY KEY, user_id INT REFERENCES users(id) ON DELETE CASCADE, title VARCHAR(255) NOT NULL, template_id INT REFERENCES habit_templates(id), frequency_type VARCHAR(50) DEFAULT 'daily', frequency_count INT DEFAULT 1, deadline DATE, total_target INT, category VARCHAR(100), source_content_id INT REFERENCES materials(id), created_at TIMESTAMP DEFAULT NOW()); CREATE TABLE IF NOT EXISTS habit_logs (id SERIAL PRIMARY KEY, habit_id INT REFERENCES habits(id) ON DELETE CASCADE, date DATE NOT NULL, completed BOOLEAN DEFAULT true, UNIQUE(habit_id, date)); CREATE TABLE IF NOT EXISTS ambassador_gifts (id SERIAL PRIMARY KEY, user_id INT REFERENCES users(id) ON DELETE CASCADE, milestone_months INT NOT NULL, claimed BOOLEAN DEFAULT false); CREATE TABLE IF NOT EXISTS delivery_forms (id SERIAL PRIMARY KEY, user_id INT REFERENCES users(id), name VARCHAR(255), phone VARCHAR(50), email VARCHAR(255), city VARCHAR(255), street TEXT, postal_code VARCHAR(20), created_at TIMESTAMP DEFAULT NOW());`);
-  console.log('Tables created');
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS users (
+      id SERIAL PRIMARY KEY,
+      email VARCHAR(255) UNIQUE NOT NULL,
+      password_hash TEXT NOT NULL,
+      name VARCHAR(255) DEFAULT '',
+      avatar_url TEXT,
+      subscription_status VARCHAR(50) DEFAULT 'inactive',
+      subscription_start TIMESTAMP,
+      subscription_end TIMESTAMP,
+      ambassador_status VARCHAR(50) DEFAULT 'none',
+      ambassador_status_override BOOLEAN DEFAULT false,
+      delivery_form_submitted BOOLEAN DEFAULT false,
+      is_admin BOOLEAN DEFAULT false,
+      role VARCHAR(50) DEFAULT 'user',
+      admin_permissions TEXT[] DEFAULT '{}',
+      tg_invite_link TEXT,
+      gift_content_id INT,
+      created_at TIMESTAMP DEFAULT NOW()
+    );
+
+    CREATE TABLE IF NOT EXISTS library_sections (
+      id SERIAL PRIMARY KEY,
+      name VARCHAR(255) NOT NULL,
+      icon VARCHAR(50) DEFAULT 'Gem',
+      order_index INT DEFAULT 0
+    );
+
+    CREATE TABLE IF NOT EXISTS library_subsections (
+      id SERIAL PRIMARY KEY,
+      section_id INT REFERENCES library_sections(id) ON DELETE CASCADE,
+      name VARCHAR(255) NOT NULL,
+      order_index INT DEFAULT 0
+    );
+
+    CREATE TABLE IF NOT EXISTS materials (
+      id SERIAL PRIMARY KEY,
+      title VARCHAR(255) NOT NULL,
+      description TEXT,
+      section_id INT REFERENCES library_sections(id),
+      subsection_id INT REFERENCES library_subsections(id),
+      type VARCHAR(50) DEFAULT 'video',
+      video_url TEXT,
+      thumbnail_url TEXT,
+      is_published BOOLEAN DEFAULT true,
+      created_at TIMESTAMP DEFAULT NOW()
+    );
+
+    CREATE TABLE IF NOT EXISTS additional_materials (
+      id SERIAL PRIMARY KEY,
+      content_id INT REFERENCES materials(id) ON DELETE CASCADE,
+      title VARCHAR(255),
+      url TEXT,
+      type VARCHAR(50) DEFAULT 'video',
+      order_index INT DEFAULT 0
+    );
+
+    CREATE TABLE IF NOT EXISTS habit_templates (
+      id SERIAL PRIMARY KEY,
+      title VARCHAR(255) NOT NULL,
+      description TEXT,
+      category VARCHAR(100),
+      source_content_id INT REFERENCES materials(id),
+      adopted_count INT DEFAULT 0,
+      created_by_admin BOOLEAN DEFAULT true,
+      created_at TIMESTAMP DEFAULT NOW()
+    );
+
+    CREATE TABLE IF NOT EXISTS habits (
+      id SERIAL PRIMARY KEY,
+      user_id INT REFERENCES users(id) ON DELETE CASCADE,
+      title VARCHAR(255) NOT NULL,
+      template_id INT REFERENCES habit_templates(id),
+      frequency_type VARCHAR(50) DEFAULT 'daily',
+      frequency_count INT DEFAULT 1,
+      deadline DATE,
+      total_target INT,
+      category VARCHAR(100),
+      source_content_id INT REFERENCES materials(id),
+      created_at TIMESTAMP DEFAULT NOW()
+    );
+
+    CREATE TABLE IF NOT EXISTS habit_logs (
+      id SERIAL PRIMARY KEY,
+      habit_id INT REFERENCES habits(id) ON DELETE CASCADE,
+      date DATE NOT NULL,
+      completed BOOLEAN DEFAULT true,
+      UNIQUE(habit_id, date)
+    );
+
+    CREATE TABLE IF NOT EXISTS ambassador_gifts (
+      id SERIAL PRIMARY KEY,
+      user_id INT REFERENCES users(id) ON DELETE CASCADE,
+      milestone_months INT NOT NULL,
+      claimed BOOLEAN DEFAULT false
+    );
+
+    CREATE TABLE IF NOT EXISTS delivery_forms (
+      id SERIAL PRIMARY KEY,
+      user_id INT REFERENCES users(id),
+      name VARCHAR(255),
+      phone VARCHAR(50),
+      email VARCHAR(255),
+      city VARCHAR(255),
+      street TEXT,
+      postal_code VARCHAR(20),
+      created_at TIMESTAMP DEFAULT NOW()
+    );
+
+    CREATE TABLE IF NOT EXISTS admin_invites (
+      id SERIAL PRIMARY KEY,
+      token VARCHAR(255) UNIQUE NOT NULL,
+      role VARCHAR(50) DEFAULT 'admin' NOT NULL,
+      admin_permissions TEXT[] DEFAULT '{}',
+      created_by INT REFERENCES users(id),
+      used_by INT REFERENCES users(id),
+      used_at TIMESTAMP,
+      expires_at TIMESTAMP NOT NULL,
+      created_at TIMESTAMP DEFAULT NOW()
+    );
+  `);
+
+  console.log('All tables created successfully');
   process.exit(0);
 }
+
 init().catch(err => { console.error(err); process.exit(1); });

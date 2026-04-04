@@ -46,9 +46,7 @@ const ProfilePage = () => {
                 <User className="h-10 w-10 text-primary" strokeWidth={1.5} />
               )}
             </div>
-            <button className="absolute -bottom-1 -right-1 flex h-7 w-7 items-center justify-center rounded-full border-2 border-card bg-primary text-primary-foreground hover:scale-110 transition-transform">
-              <Camera className="h-3.5 w-3.5" />
-            </button>
+            {/* TODO: implement avatar upload */}
           </div>
           <div>
             <h1 className="font-heading text-2xl font-semibold text-foreground">

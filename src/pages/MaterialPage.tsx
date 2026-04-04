@@ -16,8 +16,9 @@ const MaterialPage = () => {
 
   useEffect(() => {
     if (!isPreview) { setShowOverlay(false); return; }
+    // Show overlay after 15 seconds of preview
+    setShowOverlay(false);
     const timer = setTimeout(() => setShowOverlay(true), 15000);
-    setShowOverlay(true);
     return () => clearTimeout(timer);
   }, [isPreview]);
 
@@ -43,8 +44,8 @@ const MaterialPage = () => {
     );
   }
 
-  const section = sections.find((s) => s.id === material.section_id);
-  const subsection = section?.subsections.find((sub) => sub.id === material.subsection_id);
+  const section = sections.find((s) => String(s.id) === String(material.section_id));
+  const subsection = section?.subsections.find((sub) => String(sub.id) === String(material.subsection_id));
   const additionalMaterials = material.additional_materials || [];
 
   // Convert YouTube URLs to embed format
@@ -180,7 +181,12 @@ const MaterialPage = () => {
                     {am.type === "video" ? "Видео" : "Аудио"}
                   </p>
                 </div>
-                <Button variant="ghost" size="sm" className="h-8 w-8 p-0 rounded-full">
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="h-8 w-8 p-0 rounded-full"
+                  onClick={() => window.open(am.url, '_blank', 'noopener')}
+                >
                   <Play className="h-4 w-4 text-primary" strokeWidth={1.5} />
                 </Button>
               </div>

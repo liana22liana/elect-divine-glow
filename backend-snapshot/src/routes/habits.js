@@ -36,6 +36,10 @@ router.delete('/:id', authMiddleware, async (req, res) => {
 });
 router.get('/:id/logs', authMiddleware, async (req, res) => {
   try {
+    // Verify habit belongs to user
+    const habit = await pool.query('SELECT id FROM habits WHERE id=$1 AND user_id=$2', [req.params.id, req.userId]);
+    if (!habit.rows.length) return res.status(404).json({ error: 'Not found' });
+
     const { from, to } = req.query;
     let sql = 'SELECT * FROM habit_logs WHERE habit_id=$1'; const params = [req.params.id]; let idx = 2;
     if (from) { sql += ` AND date >= $${idx++}`; params.push(from); }
@@ -45,6 +49,10 @@ router.get('/:id/logs', authMiddleware, async (req, res) => {
 });
 router.post('/:id/logs', authMiddleware, async (req, res) => {
   try {
+    // Verify habit belongs to user
+    const habit = await pool.query('SELECT id FROM habits WHERE id=$1 AND user_id=$2', [req.params.id, req.userId]);
+    if (!habit.rows.length) return res.status(404).json({ error: 'Not found' });
+
     const { date, completed } = req.body;
     const result = await pool.query(
       `INSERT INTO habit_logs (habit_id, date, completed) VALUES ($1,$2,$3) ON CONFLICT (habit_id, date) DO UPDATE SET completed=$3 RETURNING *`,

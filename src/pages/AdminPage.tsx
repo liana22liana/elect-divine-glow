@@ -43,7 +43,7 @@ import { api } from "@/lib/api";
 type TabId = AdminTabId;
 
 type DeleteTarget = {
-  type: "material" | "section" | "subsection" | "template";
+  type: "material" | "section" | "subsection" | "template" | "user";
   id: string;
   label: string;
 };
@@ -724,7 +724,7 @@ const AdminPage = () => {
                             variant="ghost"
                             size="sm"
                             className="text-destructive hover:bg-destructive/10 gap-1.5"
-                            onClick={() => setDeleteTarget({ type: "user" as any, id: user.id, label: user.name })}
+                            onClick={() => setDeleteTarget({ type: "user", id: user.id, label: user.name })}
                           >
                             <Trash2 className="h-3.5 w-3.5" />
                             Удалить пользователя

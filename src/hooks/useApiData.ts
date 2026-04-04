@@ -122,7 +122,7 @@ export const useAdminDeliveryForms = () =>
 export const useAdminMaterials = () =>
   useQuery<Material[]>({
     queryKey: ["admin", "materials"],
-    queryFn: () => api.materials.list(),
+    queryFn: () => api.admin.materials(),
   });
 
 export const useAdminTemplates = () =>

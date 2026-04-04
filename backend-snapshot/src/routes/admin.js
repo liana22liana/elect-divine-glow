@@ -75,6 +75,8 @@ router.put('/users/:id', authMiddleware, adminOnly, async (req, res) => {
     if (subscription_end !== undefined) { sets.push(`subscription_end=$${idx++}`); params.push(subscription_end || null); }
     if (delivery_status === 'submitted') { sets.push(`delivery_form_submitted=true`); }
     if (delivery_status === 'not_submitted') { sets.push(`delivery_form_submitted=false`); }
+    if (req.body.tg_invite_link !== undefined) { sets.push(`tg_invite_link=$${idx++}`); params.push(req.body.tg_invite_link || null); }
+    if (req.body.gift_content_id !== undefined) { sets.push(`gift_content_id=$${idx++}`); params.push(req.body.gift_content_id || null); }
 
     if (sets.length === 0) return res.status(400).json({ error: 'Nothing to update' });
 
@@ -219,8 +221,6 @@ router.delete('/templates/:id', authMiddleware, adminOnly, async (req, res) => {
   catch (err) { console.error(err); res.status(500).json({ error: 'Server error' }); }
 });
 
-module.exports = router;
-
 // ── Delete user (superadmin only) ──
 const { superadminOnly } = require('../middleware/auth');
 router.delete('/users/:id', authMiddleware, superadminOnly, async (req, res) => {
@@ -239,3 +239,5 @@ router.delete('/users/:id', authMiddleware, superadminOnly, async (req, res) => 
     res.status(204).end();
   } catch (err) { console.error(err); res.status(500).json({ error: 'Server error' }); }
 });
+
+module.exports = router;

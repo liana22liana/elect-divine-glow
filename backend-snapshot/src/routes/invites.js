@@ -22,12 +22,12 @@ router.post('/', authMiddleware, superadminOnly, async (req, res) => {
   try {
     const { role, admin_permissions, expires_hours } = req.body;
     const token = crypto.randomBytes(32).toString('hex');
-    const hours = expires_hours || 72;
+    const hours = parseInt(expires_hours) || 72;
     const result = await pool.query(
       `INSERT INTO admin_invites (token, role, admin_permissions, created_by, expires_at)
-       VALUES ($1, $2, $3, $4, NOW() + interval '${parseInt(hours)} hours')
+       VALUES ($1, $2, $3, $4, NOW() + $5 * interval '1 hour')
        RETURNING *`,
-      [token, role || 'admin', admin_permissions || [], req.userId]
+      [token, role || 'admin', admin_permissions || [], req.userId, hours]
     );
     res.status(201).json(result.rows[0]);
   } catch (err) { console.error(err); res.status(500).json({ error: 'Server error' }); }

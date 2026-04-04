@@ -26,15 +26,15 @@ const LibraryPage = () => {
   const { data: sections = [], isLoading: loadingSec } = useSections();
   const { data: materials = [], isLoading: loadingMat } = useMaterials();
 
-  const currentSection = sections.find((s) => s.id === activeSection);
+  const currentSection = sections.find((s) => String(s.id) === activeSection);
   const hasSubsections = currentSection && currentSection.subsections.length > 0;
 
   const filtered = materials.filter((m) => {
     if (!m.is_published) return false;
     if (activeSection === "all") return true;
-    if (m.section_id !== activeSection) return false;
+    if (String(m.section_id) !== activeSection) return false;
     if (hasSubsections && activeSub !== "all") {
-      return m.subsection_id === activeSub;
+      return String(m.subsection_id) === activeSub;
     }
     return true;
   });
