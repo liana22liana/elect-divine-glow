@@ -7,6 +7,9 @@ import { Switch } from "@/components/ui/switch";
 import { Eye } from "lucide-react";
 import { useMaterials, useSections } from "@/hooks/useApiData";
 import { useAuth } from "@/contexts/AuthContext";
+import { AMBASSADOR_MILESTONES } from "@/lib/types";
+import type { AmbassadorStatus } from "@/lib/types";
+import { Lock, Gift } from "lucide-react";
 
 const LibraryPage = () => {
   const [searchParams, setSearchParams] = useSearchParams();
@@ -31,6 +34,8 @@ const LibraryPage = () => {
 
   const filtered = materials.filter((m) => {
     if (!m.is_published) return false;
+    // Exclude bonus (ambassador-locked) materials from main list — they show in bonus section
+    if (activeSection === "all" && m.required_ambassador_status) return false;
     if (activeSection === "all") return true;
     if (String(m.section_id) !== activeSection) return false;
     if (hasSubsections && activeSub !== "all") {
@@ -158,6 +163,36 @@ const LibraryPage = () => {
           </p>
         </div>
       )}
+
+      {/* Бонусы амбассадора */}
+      {activeSection === "all" && (() => {
+        const bonusMaterials = materials.filter(m => m.is_published && m.required_ambassador_status);
+        if (bonusMaterials.length === 0) return null;
+
+        const statusOrder: AmbassadorStatus[] = ['rising', 'becoming', 'transformed', 'reborn'];
+        const userStatus = user?.ambassador_status;
+        const userIdx = userStatus ? statusOrder.indexOf(userStatus) : -1;
+        const isAdmin = user?.role === 'admin' || user?.role === 'superadmin';
+
+        return (
+          <section className="space-y-4 pt-4">
+            <div className="flex items-center gap-3">
+              <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-primary/10">
+                <Gift className="h-5 w-5 text-primary" strokeWidth={1.5} />
+              </div>
+              <div>
+                <h2 className="font-heading text-xl font-semibold text-foreground">Бонусы амбассадора</h2>
+                <p className="text-xs text-muted-foreground">Эксклюзивные материалы за верность клубу ✨</p>
+              </div>
+            </div>
+            <div className={previewEnabled ? "grid grid-cols-1 gap-5 md:grid-cols-2 lg:grid-cols-3" : "flex flex-col gap-3"}>
+              {bonusMaterials.map((material) => (
+                <MaterialCard key={material.id} material={material} previewEnabled={previewEnabled} />
+              ))}
+            </div>
+          </section>
+        );
+      })()}
     </div>
   );
 };
