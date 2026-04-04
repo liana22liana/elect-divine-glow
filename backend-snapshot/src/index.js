@@ -24,11 +24,32 @@ const path = require('path');
 
 // Serve frontend static files
 const frontendPath = path.join(__dirname, '../../elect-frontend/dist');
-app.use(express.static(frontendPath));
 
-// SPA fallback — all non-API routes serve index.html
+// Assets with hash in filename — cache aggressively
+app.use('/assets', express.static(path.join(frontendPath, 'assets'), {
+  maxAge: '1y',
+  immutable: true,
+}));
+
+// Other static files (icons, manifest) — short cache
+app.use(express.static(frontendPath, {
+  maxAge: '1h',
+  setHeaders: (res, filePath) => {
+    // Never cache index.html even if served as static
+    if (filePath.endsWith('.html')) {
+      res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
+      res.setHeader('Pragma', 'no-cache');
+      res.setHeader('Expires', '0');
+    }
+  },
+}));
+
+// SPA fallback — all non-API routes serve index.html with no-cache
 app.get('*', (req, res) => {
   if (!req.path.startsWith('/api/') && !req.path.startsWith('/health')) {
+    res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
+    res.setHeader('Pragma', 'no-cache');
+    res.setHeader('Expires', '0');
     res.sendFile(path.join(frontendPath, 'index.html'));
   }
 });
