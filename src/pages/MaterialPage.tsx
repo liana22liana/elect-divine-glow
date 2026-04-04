@@ -155,49 +155,40 @@ const MaterialPage = () => {
         </p>
       </div>
 
-      {additionalMaterials.length > 0 && (
-        <div className="space-y-3">
+      {additionalMaterials.map((am) => (
+        <div key={am.id} className="space-y-4">
+          <div className="h-px bg-border" />
           <h2 className="font-heading text-xl font-semibold text-foreground">
-            Дополнительные материалы
+            {am.title}
           </h2>
-          <div className="space-y-2">
-            {additionalMaterials.map((am) => (
-              <div
-                key={am.id}
-                className="flex items-center gap-3 rounded-lg border border-border bg-card p-3 transition-colors hover:bg-muted/50"
-              >
-                <div className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-lg bg-primary/10">
-                  {am.type === "video" ? (
-                    <Video className="h-4 w-4 text-primary" strokeWidth={1.5} />
-                  ) : (
-                    <Headphones className="h-4 w-4 text-primary" strokeWidth={1.5} />
-                  )}
-                </div>
-                <div className="flex-1 min-w-0">
-                  <p className="text-sm font-medium text-foreground truncate">
-                    {am.title}
-                  </p>
-                  {am.description ? (
-                    <p className="text-xs text-muted-foreground">{am.description}</p>
-                  ) : (
-                    <p className="text-xs text-muted-foreground">
-                      {am.type === "video" ? "Видео" : "Аудио"}
-                    </p>
-                  )}
-                </div>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  className="h-8 w-8 p-0 rounded-full"
-                  onClick={() => window.open(am.url, '_blank', 'noopener')}
-                >
-                  <Play className="h-4 w-4 text-primary" strokeWidth={1.5} />
-                </Button>
+          {am.description && (
+            <p className="text-sm text-foreground/80">{am.description}</p>
+          )}
+          <div className="relative overflow-hidden rounded-lg bg-muted">
+            {am.url ? (
+              <div className="aspect-video">
+                <iframe
+                  src={getEmbedUrl(am.url)}
+                  className="h-full w-full"
+                  allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                  allowFullScreen
+                  title={am.title}
+                />
               </div>
-            ))}
+            ) : (
+              <div className="flex aspect-video items-center justify-center">
+                <div className="flex flex-col items-center gap-3 text-muted-foreground">
+                  {am.type === "video" ? (
+                    <Video className="h-16 w-16" strokeWidth={1} />
+                  ) : (
+                    <Headphones className="h-16 w-16" strokeWidth={1} />
+                  )}
+                </div>
+              </div>
+            )}
           </div>
         </div>
-      )}
+      ))}
     </div>
   );
 };
