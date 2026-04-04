@@ -36,6 +36,7 @@ import {
   useAdminStats, useAdminDeliveryForms,
   useAdminInvites, useCreateInvite, useDeleteInvite,
   useAddAdditionalMaterial, useDeleteAdditionalMaterial,
+  useDeleteUser,
 } from "@/hooks/useApiData";
 import { api } from "@/lib/api";
 
@@ -47,11 +48,12 @@ type DeleteTarget = {
   label: string;
 };
 
-const DELETE_MESSAGES: Record<DeleteTarget["type"], { title: string; desc: string }> = {
+const DELETE_MESSAGES: Record<string, { title: string; desc: string }> = {
   material: { title: "Удалить материал?", desc: "Материал будет удалён из библиотеки." },
   section: { title: "Удалить раздел?", desc: "Все подразделы и привязки материалов будут потеряны." },
   subsection: { title: "Удалить подраздел?", desc: "Привязки материалов к подразделу будут потеряны." },
   template: { title: "Удалить рекомендацию?", desc: "Привычки участниц, добавленные из этой рекомендации, останутся как свои." },
+  user: { title: "Удалить пользователя?", desc: "Аккаунт, привычки и все данные будут удалены безвозвратно." },
 };
 
 const AdminPage = () => {
@@ -142,6 +144,7 @@ const AdminPage = () => {
   const createTemplate = useCreateTemplate();
   const deleteTemplate = useDeleteTemplate();
   const updateUser = useUpdateUser();
+  const deleteUser = useDeleteUser();
 
   // Invites
   const { data: invites = [], isLoading: loadingInvites } = useAdminInvites();
@@ -307,6 +310,7 @@ const AdminPage = () => {
       case "section": deleteSection.mutate(id, { onSuccess, onError }); break;
       case "subsection": deleteSubsection.mutate(id, { onSuccess, onError }); break;
       case "template": deleteTemplate.mutate(id, { onSuccess, onError }); break;
+      case "user": deleteUser.mutate(id, { onSuccess, onError }); break;
     }
   };
 
@@ -696,6 +700,21 @@ const AdminPage = () => {
                               </div>
                             </div>
                           )}
+                        </div>
+                      )}
+
+                      {/* Delete user button */}
+                      {isSuperadmin && user.id !== currentUser?.id && (
+                        <div className="pt-3 border-t border-border">
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="text-destructive hover:bg-destructive/10 gap-1.5"
+                            onClick={() => setDeleteTarget({ type: "user" as any, id: user.id, label: user.name })}
+                          >
+                            <Trash2 className="h-3.5 w-3.5" />
+                            Удалить пользователя
+                          </Button>
                         </div>
                       )}
                     </div>

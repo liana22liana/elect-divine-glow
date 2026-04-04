@@ -247,6 +247,14 @@ export const useUpdateUser = () => {
   });
 };
 
+export const useDeleteUser = () => {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string) => api.admin.deleteUser(id),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["admin", "users"] }),
+  });
+};
+
 // ── Invites ──
 
 export const useAdminInvites = () =>

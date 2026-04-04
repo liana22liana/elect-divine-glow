@@ -133,6 +133,8 @@ export const api = {
     users: () => request<any[]>("/admin/users"),
     updateUser: (id: string, data: Record<string, any>) =>
       request<any>(`/admin/users/${id}`, { method: "PUT", body: JSON.stringify(data) }),
+    deleteUser: (id: string) =>
+      request<void>(`/admin/users/${id}`, { method: "DELETE" }),
     deliveryForms: () => request<any[]>("/admin/delivery-forms"),
     exportUsersUrl: () => {
       const token = getToken();
