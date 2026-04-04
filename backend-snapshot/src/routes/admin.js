@@ -194,6 +194,18 @@ router.post('/subsections', authMiddleware, adminOnly, async (req, res) => {
   } catch (err) { console.error(err); res.status(500).json({ error: 'Server error' }); }
 });
 
+router.put('/subsections/:id', authMiddleware, adminOnly, async (req, res) => {
+  try {
+    const { name } = req.body;
+    const result = await pool.query(
+      'UPDATE library_subsections SET name=COALESCE($1,name) WHERE id=$2 RETURNING *',
+      [name, req.params.id]
+    );
+    if (!result.rows.length) return res.status(404).json({ error: 'Not found' });
+    res.json(result.rows[0]);
+  } catch (err) { console.error(err); res.status(500).json({ error: 'Server error' }); }
+});
+
 router.delete('/subsections/:id', authMiddleware, adminOnly, async (req, res) => {
   try { await pool.query('DELETE FROM library_subsections WHERE id=$1', [req.params.id]); res.status(204).end(); }
   catch (err) { console.error(err); res.status(500).json({ error: 'Server error' }); }

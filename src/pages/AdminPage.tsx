@@ -31,7 +31,7 @@ import {
   useSections, useAdminMaterials, useAdminUsers, useAdminTemplates,
   useDeleteMaterial, useDeleteTemplate, useCreateMaterial, useUpdateMaterial,
   useCreateSection, useUpdateSection, useDeleteSection,
-  useCreateSubsection, useDeleteSubsection,
+  useCreateSubsection, useUpdateSubsection, useDeleteSubsection,
   useCreateTemplate, useUpdateUser,
   useAdminStats, useAdminDeliveryForms,
   useAdminInvites, useCreateInvite, useDeleteInvite,
@@ -105,6 +105,7 @@ const AdminPage = () => {
   const [secIcon, setSecIcon] = useState("");
 
   // ── Subsection form state ──
+  const [editingSubsection, setEditingSubsection] = useState<LibrarySubsection | null>(null);
   const [subName, setSubName] = useState("");
 
   // ── Recommendation form state ──
@@ -140,6 +141,7 @@ const AdminPage = () => {
   const updateSection = useUpdateSection();
   const deleteSection = useDeleteSection();
   const createSubsection = useCreateSubsection();
+  const updateSubsection = useUpdateSubsection();
   const deleteSubsection = useDeleteSubsection();
   const createTemplate = useCreateTemplate();
   const deleteTemplate = useDeleteTemplate();
@@ -277,16 +279,31 @@ const AdminPage = () => {
 
   // ── Subsection dialog helpers ──
   const openSubsectionCreate = (sectionId: string) => {
+    setEditingSubsection(null);
     setParentSectionId(sectionId); setSubName("");
     setSubsectionDialogOpen(true);
   };
 
+  const openSubsectionEdit = (sub: LibrarySubsection) => {
+    setEditingSubsection(sub);
+    setSubName(sub.name);
+    setSubsectionDialogOpen(true);
+  };
+
   const handleSubsectionSubmit = () => {
-    if (!subName.trim() || !parentSectionId) { toast.error("Введите название"); return; }
-    createSubsection.mutate({ name: subName, section_id: parentSectionId }, {
-      onSuccess: () => { toast.success("Подраздел создан"); setSubsectionDialogOpen(false); },
-      onError: (e) => toast.error(e.message),
-    });
+    if (!subName.trim()) { toast.error("Введите название"); return; }
+    if (editingSubsection) {
+      updateSubsection.mutate({ id: editingSubsection.id, data: { name: subName } }, {
+        onSuccess: () => { toast.success("Подраздел обновлён"); setSubsectionDialogOpen(false); },
+        onError: (e) => toast.error(e.message),
+      });
+    } else {
+      if (!parentSectionId) { toast.error("Введите название"); return; }
+      createSubsection.mutate({ name: subName, section_id: parentSectionId }, {
+        onSuccess: () => { toast.success("Подраздел создан"); setSubsectionDialogOpen(false); },
+        onError: (e) => toast.error(e.message),
+      });
+    }
   };
 
   // ── Recommendation dialog helpers ──
@@ -514,6 +531,9 @@ const AdminPage = () => {
                           <span className="text-xs text-muted-foreground">
                             {materials.filter((m) => String(m.subsection_id) === String(sub.id) && m.is_published).length} мат.
                           </span>
+                          <button className="rounded p-1.5 text-muted-foreground hover:bg-muted hover:text-foreground transition-colors" onClick={() => openSubsectionEdit(sub)}>
+                            <Pencil className="h-3.5 w-3.5" strokeWidth={1.5} />
+                          </button>
                           <button className="rounded p-1.5 text-muted-foreground hover:bg-destructive/10 hover:text-destructive transition-colors" onClick={() => setDeleteTarget({ type: "subsection", id: sub.id, label: sub.name })}>
                             <Trash2 className="h-3.5 w-3.5" strokeWidth={1.5} />
                           </button>
@@ -1007,15 +1027,17 @@ const AdminPage = () => {
       <Dialog open={subsectionDialogOpen} onOpenChange={setSubsectionDialogOpen}>
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
-            <DialogTitle className="font-heading text-xl">Новый подраздел</DialogTitle>
+            <DialogTitle className="font-heading text-xl">
+              {editingSubsection ? "Редактировать подраздел" : "Новый подраздел"}
+            </DialogTitle>
           </DialogHeader>
           <form className="space-y-4" onSubmit={(e) => { e.preventDefault(); handleSubsectionSubmit(); }}>
             <div className="space-y-2">
               <Label>Название</Label>
               <Input placeholder="Название подраздела" className="h-11" value={subName} onChange={(e) => setSubName(e.target.value)} />
             </div>
-            <Button type="submit" className="h-11 w-full" disabled={createSubsection.isPending}>
-              {createSubsection.isPending ? "Сохранение..." : "Сохранить"}
+            <Button type="submit" className="h-11 w-full" disabled={createSubsection.isPending || updateSubsection.isPending}>
+              {(createSubsection.isPending || updateSubsection.isPending) ? "Сохранение..." : "Сохранить"}
             </Button>
           </form>
         </DialogContent>

@@ -156,6 +156,8 @@ export const api = {
     subsections: {
       create: (data: Record<string, any>) =>
         request<any>("/admin/subsections", { method: "POST", body: JSON.stringify(data) }),
+      update: (id: string, data: Record<string, any>) =>
+        request<any>(`/admin/subsections/${id}`, { method: "PUT", body: JSON.stringify(data) }),
       delete: (id: string) =>
         request<void>(`/admin/subsections/${id}`, { method: "DELETE" }),
     },

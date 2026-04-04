@@ -210,6 +210,15 @@ export const useCreateSubsection = () => {
   });
 };
 
+export const useUpdateSubsection = () => {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, data }: { id: string; data: Record<string, any> }) =>
+      api.admin.subsections.update(id, data),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["sections"] }),
+  });
+};
+
 export const useDeleteSubsection = () => {
   const qc = useQueryClient();
   return useMutation({
