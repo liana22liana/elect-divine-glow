@@ -164,6 +164,20 @@ const AdminPage = () => {
 
   const selectedMatSection = sections.find((s) => String(s.id) === matSectionId);
 
+  // Auto-extract YouTube thumbnail from URL
+  const extractYoutubeThumbnail = (url: string): string | null => {
+    if (!url) return null;
+    const watchMatch = url.match(/(?:youtube\.com\/watch\?v=)([a-zA-Z0-9_-]+)/);
+    if (watchMatch) return `https://img.youtube.com/vi/${watchMatch[1]}/hqdefault.jpg`;
+    const shortMatch = url.match(/(?:youtu\.be\/)([a-zA-Z0-9_-]+)/);
+    if (shortMatch) return `https://img.youtube.com/vi/${shortMatch[1]}/hqdefault.jpg`;
+    const shortsMatch = url.match(/(?:youtube\.com\/shorts\/)([a-zA-Z0-9_-]+)/);
+    if (shortsMatch) return `https://img.youtube.com/vi/${shortsMatch[1]}/hqdefault.jpg`;
+    const embedMatch = url.match(/(?:youtube\.com\/embed\/)([a-zA-Z0-9_-]+)/);
+    if (embedMatch) return `https://img.youtube.com/vi/${embedMatch[1]}/hqdefault.jpg`;
+    return null;
+  };
+
   const ALL_PERMISSION_TABS: { id: AdminTabId; label: string }[] = [
     { id: "materials", label: "Материалы" },
     { id: "structure", label: "Структура" },
@@ -836,7 +850,15 @@ const AdminPage = () => {
             </div>
             <div className="space-y-2">
               <Label>Ссылка на видео/аудио</Label>
-              <Input placeholder="https://..." className="h-11" value={matVideoUrl} onChange={(e) => setMatVideoUrl(e.target.value)} />
+              <Input placeholder="https://..." className="h-11" value={matVideoUrl} onChange={(e) => {
+                const url = e.target.value;
+                setMatVideoUrl(url);
+                // Авто-подстановка превью если обложка пустая
+                if (!matThumbnail || matThumbnail === extractYoutubeThumbnail(matVideoUrl) || matThumbnail === '') {
+                  const thumb = extractYoutubeThumbnail(url);
+                  if (thumb) setMatThumbnail(thumb);
+                }
+              }} />
             </div>
             <div className="space-y-2">
               <Label>Обложка (URL)</Label>

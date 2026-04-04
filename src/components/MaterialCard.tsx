@@ -25,6 +25,22 @@ interface MaterialCardProps {
   previewEnabled?: boolean;
 }
 
+// Extract YouTube video ID from any URL format
+const getYoutubeThumbnail = (url: string): string | null => {
+  if (!url) return null;
+  const patterns = [
+    /(?:youtube\.com\/watch\?v=)([a-zA-Z0-9_-]+)/,
+    /(?:youtu\.be\/)([a-zA-Z0-9_-]+)/,
+    /(?:youtube\.com\/shorts\/)([a-zA-Z0-9_-]+)/,
+    /(?:youtube\.com\/embed\/)([a-zA-Z0-9_-]+)/,
+  ];
+  for (const p of patterns) {
+    const m = url.match(p);
+    if (m) return `https://img.youtube.com/vi/${m[1]}/hqdefault.jpg`;
+  }
+  return null;
+};
+
 const MaterialCard = ({ material, previewEnabled = false }: MaterialCardProps) => {
   const { data: sections = [] } = useSections();
   const { user } = useAuth();
@@ -33,6 +49,9 @@ const MaterialCard = ({ material, previewEnabled = false }: MaterialCardProps) =
   // For now, locked content check is simplified (no mock data)
   const isLocked = false;
   const requiredLabel: string | null = null;
+
+  // Thumbnail: explicit > YouTube auto > null
+  const thumbnailUrl = material.thumbnail_url || getYoutubeThumbnail(material.video_url) || null;
 
   const gradient = SECTION_GRADIENTS[material.section_id] || SECTION_GRADIENTS.practices;
 
@@ -88,17 +107,21 @@ const MaterialCard = ({ material, previewEnabled = false }: MaterialCardProps) =
   const card = (
     <div className="group relative block overflow-hidden rounded-2xl border border-border bg-card shadow-sm transition-all duration-200 hover:shadow-md hover:border-primary/20">
       <div className={`relative aspect-video bg-gradient-to-br ${gradient}`}>
-        <div className="absolute inset-0 flex items-center justify-center">
-          {material.type === "video" ? (
-            <div className="flex h-14 w-14 items-center justify-center rounded-full bg-card/80 shadow-md backdrop-blur-sm">
-              <Video className="h-7 w-7 text-foreground/60" strokeWidth={1.5} />
-            </div>
-          ) : (
-            <div className="flex h-14 w-14 items-center justify-center rounded-full bg-card/80 shadow-md backdrop-blur-sm">
-              <Headphones className="h-7 w-7 text-foreground/60" strokeWidth={1.5} />
-            </div>
-          )}
-        </div>
+        {thumbnailUrl ? (
+          <img src={thumbnailUrl} alt={material.title} className="absolute inset-0 h-full w-full object-cover" />
+        ) : (
+          <div className="absolute inset-0 flex items-center justify-center">
+            {material.type === "video" ? (
+              <div className="flex h-14 w-14 items-center justify-center rounded-full bg-card/80 shadow-md backdrop-blur-sm">
+                <Video className="h-7 w-7 text-foreground/60" strokeWidth={1.5} />
+              </div>
+            ) : (
+              <div className="flex h-14 w-14 items-center justify-center rounded-full bg-card/80 shadow-md backdrop-blur-sm">
+                <Headphones className="h-7 w-7 text-foreground/60" strokeWidth={1.5} />
+              </div>
+            )}
+          </div>
+        )}
         <div className="absolute right-3 top-3">
           {material.type === "video" ? (
             <span className="flex items-center gap-1 rounded-full bg-foreground/70 px-2.5 py-1 text-xs font-medium text-primary-foreground backdrop-blur-sm">
