@@ -98,6 +98,7 @@ const AdminPage = () => {
   const [matVideoUrl, setMatVideoUrl] = useState("");
   const [matThumbnail, setMatThumbnail] = useState("");
   const [matPublished, setMatPublished] = useState(true);
+  const [matRequiredStatus, setMatRequiredStatus] = useState<string>("");
 
   // ── Section form state ──
   const [editingSection, setEditingSection] = useState<LibrarySection | null>(null);
@@ -215,7 +216,7 @@ const AdminPage = () => {
   const openMaterialCreate = () => {
     setEditingMaterial(null);
     setMatTitle(""); setMatDescription(""); setMatSectionId(""); setMatSubsectionId("");
-    setMatType("video"); setMatVideoUrl(""); setMatThumbnail(""); setMatPublished(true);
+    setMatType("video"); setMatVideoUrl(""); setMatThumbnail(""); setMatPublished(true); setMatRequiredStatus("");
     setMaterialDialogOpen(true);
   };
 
@@ -223,7 +224,7 @@ const AdminPage = () => {
     setEditingMaterial(m);
     setMatTitle(m.title); setMatDescription(m.description);
     setMatSectionId(String(m.section_id)); setMatSubsectionId(m.subsection_id ? String(m.subsection_id) : "");
-    setMatType(m.type); setMatVideoUrl(m.video_url); setMatThumbnail(m.thumbnail_url || ""); setMatPublished(m.is_published !== false);
+    setMatType(m.type); setMatVideoUrl(m.video_url); setMatThumbnail(m.thumbnail_url || ""); setMatPublished(m.is_published !== false); setMatRequiredStatus(m.required_ambassador_status || "");
     setMaterialDialogOpen(true);
   };
 
@@ -236,6 +237,7 @@ const AdminPage = () => {
       title: matTitle, description: matDescription, section_id: matSectionId,
       subsection_id: matSubsectionId || null, type: matType, video_url: matVideoUrl,
       thumbnail_url: matThumbnail || null, is_published: matPublished,
+      required_ambassador_status: matRequiredStatus || null,
     };
     if (editingMaterial) {
       updateMaterial.mutate({ id: editingMaterial.id, data: payload }, {
@@ -458,6 +460,11 @@ const AdminPage = () => {
                     {material.is_published === false && (
                       <span className="flex items-center gap-1 rounded-full bg-yellow-100 px-2 py-0.5 text-[10px] font-medium text-yellow-700">
                         <EyeOff className="h-3 w-3" /> Черновик
+                      </span>
+                    )}
+                    {material.required_ambassador_status && (
+                      <span className="flex items-center gap-1 rounded-full bg-primary/10 px-2 py-0.5 text-[10px] font-medium text-primary">
+                        🔒 {AMBASSADOR_MILESTONES.find(m => m.status === material.required_ambassador_status)?.label}
                       </span>
                     )}
                     <button
@@ -892,6 +899,25 @@ const AdminPage = () => {
                 <Label>Опубликован</Label>
               </div>
               <Switch checked={matPublished} onCheckedChange={setMatPublished} />
+            </div>
+            <div className="space-y-2">
+              <Label>Закрытый материал (для амбассадоров)</Label>
+              <Select value={matRequiredStatus} onValueChange={setMatRequiredStatus}>
+                <SelectTrigger className="h-11"><SelectValue placeholder="Доступен всем" /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="">Доступен всем</SelectItem>
+                  {AMBASSADOR_MILESTONES.map((m) => (
+                    <SelectItem key={m.status} value={m.status}>
+                      🔒 {m.label} ({m.months} мес.)
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              {matRequiredStatus && (
+                <p className="text-xs text-muted-foreground">
+                  Этот материал увидят только участницы со статусом «{AMBASSADOR_MILESTONES.find(m => m.status === matRequiredStatus)?.label}» и выше
+                </p>
+              )}
             </div>
 
             {/* ── Additional materials ── */}

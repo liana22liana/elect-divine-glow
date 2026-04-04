@@ -107,10 +107,10 @@ router.get('/materials', authMiddleware, adminOnly, async (req, res) => {
 
 router.post('/materials', authMiddleware, adminOnly, async (req, res) => {
   try {
-    const { title, description, section_id, subsection_id, type, video_url, thumbnail_url, is_published } = req.body;
+    const { title, description, section_id, subsection_id, type, video_url, thumbnail_url, is_published, required_ambassador_status } = req.body;
     const result = await pool.query(
-      `INSERT INTO materials (title, description, section_id, subsection_id, type, video_url, thumbnail_url, is_published) VALUES ($1,$2,$3,$4,$5,$6,$7,$8) RETURNING *`,
-      [title, description, section_id, subsection_id, type || 'video', video_url, thumbnail_url, is_published !== false]
+      `INSERT INTO materials (title, description, section_id, subsection_id, type, video_url, thumbnail_url, is_published, required_ambassador_status) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9) RETURNING *`,
+      [title, description, section_id, subsection_id, type || 'video', video_url, thumbnail_url, is_published !== false, required_ambassador_status || null]
     );
     res.status(201).json(result.rows[0]);
   } catch (err) { console.error(err); res.status(500).json({ error: 'Server error' }); }
@@ -118,10 +118,10 @@ router.post('/materials', authMiddleware, adminOnly, async (req, res) => {
 
 router.put('/materials/:id', authMiddleware, adminOnly, async (req, res) => {
   try {
-    const { title, description, section_id, subsection_id, type, video_url, thumbnail_url, is_published } = req.body;
+    const { title, description, section_id, subsection_id, type, video_url, thumbnail_url, is_published, required_ambassador_status } = req.body;
     const result = await pool.query(
-      `UPDATE materials SET title=COALESCE($1,title), description=COALESCE($2,description), section_id=COALESCE($3,section_id), subsection_id=$4, type=COALESCE($5,type), video_url=COALESCE($6,video_url), thumbnail_url=$7, is_published=COALESCE($8,is_published) WHERE id=$9 RETURNING *`,
-      [title, description, section_id, subsection_id, type, video_url, thumbnail_url, is_published, req.params.id]
+      `UPDATE materials SET title=COALESCE($1,title), description=COALESCE($2,description), section_id=COALESCE($3,section_id), subsection_id=$4, type=COALESCE($5,type), video_url=COALESCE($6,video_url), thumbnail_url=$7, is_published=COALESCE($8,is_published), required_ambassador_status=$9 WHERE id=$10 RETURNING *`,
+      [title, description, section_id, subsection_id, type, video_url, thumbnail_url, is_published, required_ambassador_status || null, req.params.id]
     );
     if (!result.rows.length) return res.status(404).json({ error: 'Not found' });
     res.json(result.rows[0]);

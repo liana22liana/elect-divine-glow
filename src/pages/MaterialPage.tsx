@@ -1,9 +1,12 @@
 import { useState, useEffect } from "react";
 import { useParams, Link, useSearchParams, useNavigate } from "react-router-dom";
-import { ArrowLeft, Video, Headphones, Play } from "lucide-react";
+import { ArrowLeft, Video, Headphones, Play, Lock } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useMaterial, useSections } from "@/hooks/useApiData";
+import { useAuth } from "@/contexts/AuthContext";
+import { AMBASSADOR_MILESTONES } from "@/lib/types";
+import type { AmbassadorStatus } from "@/lib/types";
 
 const MaterialPage = () => {
   const { id } = useParams();
@@ -68,6 +71,43 @@ const MaterialPage = () => {
   };
 
   const embedUrl = getEmbedUrl(material.video_url);
+
+  // Ambassador access check
+  const { user } = useAuth();
+  const isAdmin = user?.role === 'admin' || user?.role === 'superadmin';
+  const statusOrder: AmbassadorStatus[] = ['rising', 'becoming', 'transformed', 'reborn'];
+  const userStatusIdx = user?.ambassador_status ? statusOrder.indexOf(user.ambassador_status) : -1;
+  const requiredStatusIdx = material.required_ambassador_status ? statusOrder.indexOf(material.required_ambassador_status) : -1;
+  const isLocked = material.required_ambassador_status && !isAdmin && userStatusIdx < requiredStatusIdx;
+  const requiredMilestone = AMBASSADOR_MILESTONES.find(m => m.status === material.required_ambassador_status);
+
+  if (isLocked) {
+    return (
+      <div className="space-y-6">
+        <Link
+          to="/library"
+          className="inline-flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground transition-colors"
+        >
+          <ArrowLeft className="h-4 w-4" strokeWidth={1.5} />
+          Назад к библиотеке
+        </Link>
+        <div className="flex flex-col items-center justify-center py-16 text-center space-y-6">
+          <div className="flex h-20 w-20 items-center justify-center rounded-2xl bg-primary/10">
+            <Lock className="h-10 w-10 text-primary" strokeWidth={1.5} />
+          </div>
+          <div className="space-y-2 max-w-sm">
+            <h1 className="font-heading text-2xl font-semibold text-foreground">
+              {material.title}
+            </h1>
+            <p className="text-sm text-muted-foreground leading-relaxed">
+              Этот материал доступен для участниц со статусом «{requiredMilestone?.label}» ({requiredMilestone?.months} мес. в клубе).
+              Продолжай быть в клубе — и скоро он откроется! ✨
+            </p>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">

@@ -8,7 +8,7 @@ import {
   Tooltip, TooltipContent, TooltipProvider, TooltipTrigger,
 } from "@/components/ui/tooltip";
 
-const STATUS_ORDER = [null, "rising", "becoming", "transformed", "reborn"];
+const STATUS_ORDER: (string | null)[] = [null, "rising", "becoming", "transformed", "reborn"];
 
 const SECTION_GRADIENTS: Record<string, string> = {
   money: "from-amber-100 via-yellow-50 to-orange-50",
@@ -46,9 +46,13 @@ const MaterialCard = ({ material, previewEnabled = false }: MaterialCardProps) =
   const { user } = useAuth();
   const section = sections.find((s) => s.id === material.section_id);
   
-  // For now, locked content check is simplified (no mock data)
-  const isLocked = false;
-  const requiredLabel: string | null = null;
+  // Check if material requires ambassador status
+  const isAdmin = user?.role === 'admin' || user?.role === 'superadmin';
+  const userStatusIdx = user?.ambassador_status ? STATUS_ORDER.indexOf(user.ambassador_status) : 0;
+  const requiredStatusIdx = material.required_ambassador_status ? STATUS_ORDER.indexOf(material.required_ambassador_status) : 0;
+  const isLocked = !isAdmin && material.required_ambassador_status && userStatusIdx < requiredStatusIdx;
+  const requiredMilestone = AMBASSADOR_MILESTONES.find(m => m.status === material.required_ambassador_status);
+  const requiredLabel = requiredMilestone?.label || null;
 
   // Thumbnail: explicit > YouTube auto > null
   const thumbnailUrl = material.thumbnail_url || getYoutubeThumbnail(material.video_url) || null;

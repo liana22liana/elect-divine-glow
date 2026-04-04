@@ -36,6 +36,7 @@ export interface Material {
   thumbnail_url: string;
   created_at: string;
   is_published: boolean;
+  required_ambassador_status?: AmbassadorStatus | null;
   additional_materials?: AdditionalMaterial[];
 }
 
