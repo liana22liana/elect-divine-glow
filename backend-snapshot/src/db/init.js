@@ -56,6 +56,7 @@ async function init() {
       title VARCHAR(255),
       url TEXT,
       type VARCHAR(50) DEFAULT 'video',
+      description TEXT,
       order_index INT DEFAULT 0
     );
 

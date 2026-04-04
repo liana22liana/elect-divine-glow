@@ -161,6 +161,8 @@ const AdminPage = () => {
   const [addlTitle, setAddlTitle] = useState("");
   const [addlUrl, setAddlUrl] = useState("");
   const [addlType, setAddlType] = useState<"video" | "audio">("video");
+  const [addlDescription, setAddlDescription] = useState("");
+  const [showAddlForm, setShowAddlForm] = useState(false);
 
   const selectedMatSection = sections.find((s) => String(s.id) === matSectionId);
 
@@ -877,54 +879,85 @@ const AdminPage = () => {
               <div className="space-y-3 rounded-lg border border-border p-3">
                 <Label className="text-sm font-medium">Дополнительные материалы</Label>
                 {(editingMaterial.additional_materials || []).map((am) => (
-                  <div key={am.id} className="flex items-center gap-2 rounded-md bg-muted/50 px-3 py-2">
-                    {am.type === "video" ? <Video className="h-4 w-4 text-muted-foreground" /> : <Headphones className="h-4 w-4 text-muted-foreground" />}
-                    <span className="flex-1 text-sm truncate">{am.title}</span>
-                    <button
-                      type="button"
-                      className="rounded p-1 text-muted-foreground hover:bg-destructive/10 hover:text-destructive transition-colors"
-                      onClick={() => deleteAdditional.mutate(am.id, {
-                        onSuccess: () => {
-                          toast.success("Удалено");
-                          setEditingMaterial({ ...editingMaterial, additional_materials: editingMaterial.additional_materials?.filter(a => a.id !== am.id) });
-                        }
-                      })}
-                    >
-                      <Trash2 className="h-3.5 w-3.5" />
-                    </button>
+                  <div key={am.id} className="rounded-md bg-muted/50 px-3 py-2 space-y-1">
+                    <div className="flex items-center gap-2">
+                      {am.type === "video" ? <Video className="h-4 w-4 text-muted-foreground" /> : <Headphones className="h-4 w-4 text-muted-foreground" />}
+                      <span className="flex-1 text-sm truncate font-medium">{am.title}</span>
+                      <button
+                        type="button"
+                        className="rounded p-1 text-muted-foreground hover:bg-destructive/10 hover:text-destructive transition-colors"
+                        onClick={() => deleteAdditional.mutate(am.id, {
+                          onSuccess: () => {
+                            toast.success("Удалено");
+                            setEditingMaterial({ ...editingMaterial, additional_materials: editingMaterial.additional_materials?.filter(a => a.id !== am.id) });
+                          }
+                        })}
+                      >
+                        <Trash2 className="h-3.5 w-3.5" />
+                      </button>
+                    </div>
+                    {am.description && (
+                      <p className="text-xs text-muted-foreground pl-6">{am.description}</p>
+                    )}
                   </div>
                 ))}
-                <div className="space-y-2 pt-1">
-                  <div className="flex gap-2">
-                    <Input placeholder="Название" className="h-9 text-sm flex-1" value={addlTitle} onChange={(e) => setAddlTitle(e.target.value)} />
-                    <Select value={addlType} onValueChange={(v) => setAddlType(v as "video" | "audio")}>
-                      <SelectTrigger className="h-9 w-28 text-sm"><SelectValue /></SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="video">Видео</SelectItem>
-                        <SelectItem value="audio">Аудио</SelectItem>
-                      </SelectContent>
-                    </Select>
+
+                {/* Add new additional material */}
+                {showAddlForm ? (
+                  <div className="space-y-2 rounded-md border border-dashed border-border p-3">
+                    <div className="flex gap-2">
+                      <Input placeholder="Название" className="h-9 text-sm flex-1" value={addlTitle} onChange={(e) => setAddlTitle(e.target.value)} />
+                      <Select value={addlType} onValueChange={(v) => setAddlType(v as "video" | "audio")}>
+                        <SelectTrigger className="h-9 w-28 text-sm"><SelectValue /></SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="video">Видео</SelectItem>
+                          <SelectItem value="audio">Аудио</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <Input placeholder="Ссылка https://..." className="h-9 text-sm" value={addlUrl} onChange={(e) => setAddlUrl(e.target.value)} />
+                    <Textarea
+                      placeholder="Описание (необязательно)"
+                      rows={2}
+                      className="text-sm"
+                      value={addlDescription}
+                      onChange={(e) => setAddlDescription(e.target.value)}
+                    />
+                    <div className="flex gap-2 justify-end">
+                      <Button
+                        type="button" variant="ghost" size="sm" className="h-9"
+                        onClick={() => { setShowAddlForm(false); setAddlTitle(""); setAddlUrl(""); setAddlDescription(""); }}
+                      >
+                        Отмена
+                      </Button>
+                      <Button
+                        type="button" size="sm" className="h-9 gap-1.5"
+                        disabled={!addlTitle.trim() || !addlUrl.trim() || addAdditional.isPending}
+                        onClick={() => {
+                          addAdditional.mutate({ materialId: editingMaterial.id, data: { title: addlTitle, url: addlUrl, type: addlType, description: addlDescription || undefined } }, {
+                            onSuccess: (newAm) => {
+                              toast.success("Добавлено");
+                              setEditingMaterial({ ...editingMaterial, additional_materials: [...(editingMaterial.additional_materials || []), newAm] });
+                              setAddlTitle(""); setAddlUrl(""); setAddlDescription(""); setShowAddlForm(false);
+                            },
+                            onError: (e) => toast.error(e.message),
+                          });
+                        }}
+                      >
+                        {addAdditional.isPending ? "Добавляю..." : "Добавить"}
+                      </Button>
+                    </div>
                   </div>
-                  <div className="flex gap-2">
-                    <Input placeholder="Ссылка https://..." className="h-9 text-sm flex-1" value={addlUrl} onChange={(e) => setAddlUrl(e.target.value)} />
-                    <Button
-                      type="button" variant="outline" size="sm" className="h-9 px-3"
-                      disabled={!addlTitle.trim() || !addlUrl.trim() || addAdditional.isPending}
-                      onClick={() => {
-                        addAdditional.mutate({ materialId: editingMaterial.id, data: { title: addlTitle, url: addlUrl, type: addlType } }, {
-                          onSuccess: (newAm) => {
-                            toast.success("Добавлено");
-                            setEditingMaterial({ ...editingMaterial, additional_materials: [...(editingMaterial.additional_materials || []), newAm] });
-                            setAddlTitle(""); setAddlUrl("");
-                          },
-                          onError: (e) => toast.error(e.message),
-                        });
-                      }}
-                    >
-                      <Plus className="h-3.5 w-3.5" />
-                    </Button>
-                  </div>
-                </div>
+                ) : (
+                  <button
+                    type="button"
+                    className="flex w-full items-center justify-center gap-2 rounded-md border border-dashed border-border py-2.5 text-sm text-muted-foreground hover:bg-muted/50 hover:text-foreground transition-colors"
+                    onClick={() => setShowAddlForm(true)}
+                  >
+                    <Plus className="h-4 w-4" />
+                    Добавить материал
+                  </button>
+                )}
               </div>
             )}
 

@@ -136,11 +136,11 @@ router.delete('/materials/:id', authMiddleware, adminOnly, async (req, res) => {
 // ── Additional materials ──
 router.post('/materials/:id/additional', authMiddleware, adminOnly, async (req, res) => {
   try {
-    const { title, url, type } = req.body;
+    const { title, url, type, description } = req.body;
     const maxOrder = await pool.query('SELECT COALESCE(MAX(order_index),0)+1 AS next FROM additional_materials WHERE content_id=$1', [req.params.id]);
     const result = await pool.query(
-      'INSERT INTO additional_materials (content_id, title, url, type, order_index) VALUES ($1,$2,$3,$4,$5) RETURNING *',
-      [req.params.id, title, url, type || 'video', maxOrder.rows[0].next]
+      'INSERT INTO additional_materials (content_id, title, url, type, description, order_index) VALUES ($1,$2,$3,$4,$5,$6) RETURNING *',
+      [req.params.id, title, url, type || 'video', description || null, maxOrder.rows[0].next]
     );
     res.status(201).json(result.rows[0]);
   } catch (err) { console.error(err); res.status(500).json({ error: 'Server error' }); }

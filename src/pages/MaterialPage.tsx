@@ -177,9 +177,13 @@ const MaterialPage = () => {
                   <p className="text-sm font-medium text-foreground truncate">
                     {am.title}
                   </p>
-                  <p className="text-xs text-muted-foreground">
-                    {am.type === "video" ? "Видео" : "Аудио"}
-                  </p>
+                  {am.description ? (
+                    <p className="text-xs text-muted-foreground">{am.description}</p>
+                  ) : (
+                    <p className="text-xs text-muted-foreground">
+                      {am.type === "video" ? "Видео" : "Аудио"}
+                    </p>
+                  )}
                 </div>
                 <Button
                   variant="ghost"

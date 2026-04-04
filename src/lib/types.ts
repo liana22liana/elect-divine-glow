@@ -21,6 +21,7 @@ export interface AdditionalMaterial {
   title: string;
   type: "video" | "audio";
   url: string;
+  description?: string;
   order_index: number;
 }
 
