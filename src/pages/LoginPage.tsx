@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
+import { api } from "@/lib/api";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -83,6 +84,18 @@ const LoginPage = () => {
             <button
               type="button"
               className="text-sm text-muted-foreground underline-offset-4 hover:text-primary hover:underline"
+              onClick={async () => {
+                if (!email.trim()) {
+                  toast({ title: "Введите email", description: "Укажите email в поле выше", variant: "destructive" });
+                  return;
+                }
+                try {
+                  await api.auth.forgotPassword(email);
+                  toast({ title: "Ссылка отправлена", description: "Если аккаунт найден, ссылка для сброса придёт в Telegram" });
+                } catch {
+                  toast({ title: "Ошибка", description: "Попробуйте позже", variant: "destructive" });
+                }
+              }}
             >
               Забыли пароль?
             </button>

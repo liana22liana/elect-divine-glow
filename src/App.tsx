@@ -15,6 +15,7 @@ import AdminPage from "@/pages/AdminPage";
 import NotFound from "@/pages/NotFound";
 import InvitePage from "@/pages/InvitePage";
 import AccessPage from "@/pages/AccessPage";
+import ResetPasswordPage from "@/pages/ResetPasswordPage";
 import SubscriptionGate from "@/components/SubscriptionGate";
 
 const queryClient = new QueryClient();
@@ -51,6 +52,7 @@ const AppRoutes = () => (
     </Route>
     <Route path="/invite/:token" element={<InvitePage />} />
     <Route path="/access/:token" element={<AccessPage />} />
+    <Route path="/reset-password/:token" element={<ResetPasswordPage />} />
     <Route path="*" element={<NotFound />} />
   </Routes>
 );
