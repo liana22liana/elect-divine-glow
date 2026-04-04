@@ -34,7 +34,7 @@ const LoginPage = () => {
             ELECT
           </h1>
           <p className="mt-1 text-sm tracking-widest text-muted-foreground">
-            by Dasha Avilova
+            by Daria Avilova
           </p>
           <div className="mx-auto mt-3 h-px w-12 bg-primary/60 rounded-full" />
         </div>

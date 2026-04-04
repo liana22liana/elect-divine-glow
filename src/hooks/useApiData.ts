@@ -1,6 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { api } from "@/lib/api";
-import type { LibrarySection, Material, Habit, HabitLog, HabitTemplate, UserProfile } from "@/lib/types";
+import type { LibrarySection, Material, Habit, HabitLog, HabitTemplate, UserProfile, AdminInvite } from "@/lib/types";
 
 // ── Sections ──
 export const useSections = () =>
@@ -244,5 +244,56 @@ export const useUpdateUser = () => {
     mutationFn: ({ id, data }: { id: string; data: Record<string, any> }) =>
       api.admin.updateUser(id, data),
     onSuccess: () => qc.invalidateQueries({ queryKey: ["admin", "users"] }),
+  });
+};
+
+// ── Invites ──
+
+export const useAdminInvites = () =>
+  useQuery<AdminInvite[]>({
+    queryKey: ["admin", "invites"],
+    queryFn: api.admin.invites.list,
+  });
+
+export const useCreateInvite = () => {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (data: Record<string, any>) => api.admin.invites.create(data),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["admin", "invites"] }),
+  });
+};
+
+export const useDeleteInvite = () => {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string) => api.admin.invites.delete(id),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["admin", "invites"] }),
+  });
+};
+
+// ── Additional Materials ──
+
+export const useAddAdditionalMaterial = () => {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ materialId, data }: { materialId: string; data: Record<string, any> }) =>
+      api.admin.addAdditionalMaterial(materialId, data),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["materials"] });
+      qc.invalidateQueries({ queryKey: ["admin", "materials"] });
+      qc.invalidateQueries({ queryKey: ["material"] });
+    },
+  });
+};
+
+export const useDeleteAdditionalMaterial = () => {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string) => api.admin.deleteAdditionalMaterial(id),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["materials"] });
+      qc.invalidateQueries({ queryKey: ["admin", "materials"] });
+      qc.invalidateQueries({ queryKey: ["material"] });
+    },
   });
 };

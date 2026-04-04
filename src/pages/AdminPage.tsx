@@ -3,7 +3,7 @@ import {
   Plus, Pencil, Trash2, Video, Headphones, Users as UsersIcon,
   Sparkles, Search, Layers, GripVertical, ChevronDown, ChevronRight,
   Shield, Send, Crown, Download, BarChart3, Eye, EyeOff, Image,
-  Calendar, MapPin, Phone, Mail,
+  Calendar, MapPin, Phone, Mail, UserPlus, Link, Copy, Clock,
 } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
@@ -34,6 +34,8 @@ import {
   useCreateSubsection, useDeleteSubsection,
   useCreateTemplate, useUpdateUser,
   useAdminStats, useAdminDeliveryForms,
+  useAdminInvites, useCreateInvite, useDeleteInvite,
+  useAddAdditionalMaterial, useDeleteAdditionalMaterial,
 } from "@/hooks/useApiData";
 import { api } from "@/lib/api";
 
@@ -61,6 +63,7 @@ const AdminPage = () => {
     { id: "structure" as const, label: "Структура", icon: Layers },
     { id: "users" as const, label: "Участницы", icon: UsersIcon },
     { id: "recommendations" as const, label: "Рекомендации", icon: Sparkles },
+    ...(isSuperadmin ? [{ id: "team" as const, label: "Команда", icon: UserPlus }] : []),
   ];
 
   const visibleTabs = isSuperadmin
@@ -139,6 +142,22 @@ const AdminPage = () => {
   const createTemplate = useCreateTemplate();
   const deleteTemplate = useDeleteTemplate();
   const updateUser = useUpdateUser();
+
+  // Invites
+  const { data: invites = [], isLoading: loadingInvites } = useAdminInvites();
+  const createInvite = useCreateInvite();
+  const deleteInvite = useDeleteInvite();
+  const [inviteDialogOpen, setInviteDialogOpen] = useState(false);
+  const [inviteRole, setInviteRole] = useState<string>("admin");
+  const [invitePerms, setInvitePerms] = useState<AdminTabId[]>(["materials"]);
+  const [createdInviteUrl, setCreatedInviteUrl] = useState<string | null>(null);
+
+  // Additional materials
+  const addAdditional = useAddAdditionalMaterial();
+  const deleteAdditional = useDeleteAdditionalMaterial();
+  const [addlTitle, setAddlTitle] = useState("");
+  const [addlUrl, setAddlUrl] = useState("");
+  const [addlType, setAddlType] = useState<"video" | "audio">("video");
 
   const selectedMatSection = sections.find((s) => String(s.id) === matSectionId);
 
@@ -321,6 +340,12 @@ const AdminPage = () => {
           <Button className="h-11 gap-2 rounded-lg" onClick={openRecCreate}>
             <Plus className="h-4 w-4" strokeWidth={1.5} />
             Добавить рекомендацию
+          </Button>
+        )}
+        {activeTab === "team" && isSuperadmin && (
+          <Button className="h-11 gap-2 rounded-lg" onClick={() => { setInviteDialogOpen(true); setCreatedInviteUrl(null); }}>
+            <Plus className="h-4 w-4" strokeWidth={1.5} />
+            Создать ссылку
           </Button>
         )}
         {activeTab === "users" && (
@@ -805,6 +830,63 @@ const AdminPage = () => {
               </div>
               <Switch checked={matPublished} onCheckedChange={setMatPublished} />
             </div>
+
+            {/* ── Additional materials ── */}
+            {editingMaterial && (
+              <div className="space-y-3 rounded-lg border border-border p-3">
+                <Label className="text-sm font-medium">Дополнительные материалы</Label>
+                {(editingMaterial.additional_materials || []).map((am) => (
+                  <div key={am.id} className="flex items-center gap-2 rounded-md bg-muted/50 px-3 py-2">
+                    {am.type === "video" ? <Video className="h-4 w-4 text-muted-foreground" /> : <Headphones className="h-4 w-4 text-muted-foreground" />}
+                    <span className="flex-1 text-sm truncate">{am.title}</span>
+                    <button
+                      type="button"
+                      className="rounded p-1 text-muted-foreground hover:bg-destructive/10 hover:text-destructive transition-colors"
+                      onClick={() => deleteAdditional.mutate(am.id, {
+                        onSuccess: () => {
+                          toast.success("Удалено");
+                          setEditingMaterial({ ...editingMaterial, additional_materials: editingMaterial.additional_materials?.filter(a => a.id !== am.id) });
+                        }
+                      })}
+                    >
+                      <Trash2 className="h-3.5 w-3.5" />
+                    </button>
+                  </div>
+                ))}
+                <div className="space-y-2 pt-1">
+                  <div className="flex gap-2">
+                    <Input placeholder="Название" className="h-9 text-sm flex-1" value={addlTitle} onChange={(e) => setAddlTitle(e.target.value)} />
+                    <Select value={addlType} onValueChange={(v) => setAddlType(v as "video" | "audio")}>
+                      <SelectTrigger className="h-9 w-28 text-sm"><SelectValue /></SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="video">Видео</SelectItem>
+                        <SelectItem value="audio">Аудио</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="flex gap-2">
+                    <Input placeholder="Ссылка https://..." className="h-9 text-sm flex-1" value={addlUrl} onChange={(e) => setAddlUrl(e.target.value)} />
+                    <Button
+                      type="button" variant="outline" size="sm" className="h-9 px-3"
+                      disabled={!addlTitle.trim() || !addlUrl.trim() || addAdditional.isPending}
+                      onClick={() => {
+                        addAdditional.mutate({ materialId: editingMaterial.id, data: { title: addlTitle, url: addlUrl, type: addlType } }, {
+                          onSuccess: (newAm) => {
+                            toast.success("Добавлено");
+                            setEditingMaterial({ ...editingMaterial, additional_materials: [...(editingMaterial.additional_materials || []), newAm] });
+                            setAddlTitle(""); setAddlUrl("");
+                          },
+                          onError: (e) => toast.error(e.message),
+                        });
+                      }}
+                    >
+                      <Plus className="h-3.5 w-3.5" />
+                    </Button>
+                  </div>
+                </div>
+              </div>
+            )}
+
             <Button type="submit" className="h-11 w-full" disabled={createMaterial.isPending || updateMaterial.isPending}>
               {(createMaterial.isPending || updateMaterial.isPending) ? "Сохранение..." : "Сохранить"}
             </Button>
@@ -908,6 +990,174 @@ const AdminPage = () => {
               {createTemplate.isPending ? "Сохранение..." : "Опубликовать"}
             </Button>
           </form>
+        </DialogContent>
+      </Dialog>
+
+      {/* ═══════════ Team ═══════════ */}
+      {activeTab === "team" && isSuperadmin && (
+        <div className="space-y-6">
+          {/* Current team members */}
+          <div className="space-y-3">
+            <h3 className="text-sm font-medium text-muted-foreground">Сотрудники</h3>
+            {users.filter(u => u.role === "admin" || u.role === "superadmin").map(user => (
+              <div key={user.id} className="flex items-center gap-4 rounded-lg border border-border bg-card p-4">
+                <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-full bg-primary/10">
+                  <span className="text-sm font-semibold text-primary">{user.name.charAt(0)}</span>
+                </div>
+                <div className="min-w-0 flex-1">
+                  <div className="flex items-center gap-2">
+                    <h3 className="text-sm font-medium text-foreground">{user.name}</h3>
+                    {user.role === "superadmin" ? (
+                      <span className="inline-flex items-center gap-1 rounded-full bg-primary/15 px-1.5 py-0.5 text-[10px] font-medium text-primary">
+                        <Crown className="h-2.5 w-2.5" /> Суперадмин
+                      </span>
+                    ) : (
+                      <span className="inline-flex items-center gap-1 rounded-full bg-accent/50 px-1.5 py-0.5 text-[10px] font-medium text-accent-foreground">
+                        <Shield className="h-2.5 w-2.5" /> Админ
+                      </span>
+                    )}
+                  </div>
+                  <p className="text-xs text-muted-foreground">{user.email}</p>
+                  {user.role === "admin" && user.admin_permissions && user.admin_permissions.length > 0 && (
+                    <div className="flex flex-wrap gap-1 mt-1">
+                      {user.admin_permissions.map(p => (
+                        <span key={p} className="rounded bg-muted px-1.5 py-0.5 text-[10px] text-muted-foreground">
+                          {ALL_PERMISSION_TABS.find(t => t.id === p)?.label || p}
+                        </span>
+                      ))}
+                    </div>
+                  )}
+                </div>
+                {user.role === "admin" && (
+                  <Button variant="ghost" size="sm" className="text-destructive hover:bg-destructive/10" onClick={() => handleUpdateUser(user.id, { role: "user", admin_permissions: [] })}>
+                    Убрать
+                  </Button>
+                )}
+              </div>
+            ))}
+          </div>
+
+          {/* Invite links */}
+          <div className="space-y-3">
+            <div className="flex items-center justify-between">
+              <h3 className="text-sm font-medium text-muted-foreground">Инвайт-ссылки</h3>
+              <Button size="sm" className="h-9 gap-1.5" onClick={() => { setInviteDialogOpen(true); setCreatedInviteUrl(null); }}>
+                <Plus className="h-3.5 w-3.5" /> Создать ссылку
+              </Button>
+            </div>
+            {loadingInvites ? (
+              <Skeleton className="h-16 w-full rounded-lg" />
+            ) : invites.length === 0 ? (
+              <p className="py-6 text-center text-sm text-muted-foreground">Нет активных инвайтов</p>
+            ) : (
+              invites.map(inv => {
+                const expired = new Date(inv.expires_at) < new Date();
+                const used = !!inv.used_by;
+                return (
+                  <div key={inv.id} className={cn("flex items-center gap-4 rounded-lg border bg-card p-4", expired || used ? "opacity-60 border-border" : "border-primary/30")}>
+                    <div className={cn("flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-lg", used ? "bg-green-100" : expired ? "bg-muted" : "bg-primary/10")}>
+                      {used ? <Shield className="h-5 w-5 text-green-600" /> : <Link className="h-5 w-5 text-primary" />}
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      {used ? (
+                        <p className="text-sm font-medium text-foreground">Использован: {inv.used_by_name} ({inv.used_by_email})</p>
+                      ) : expired ? (
+                        <p className="text-sm text-muted-foreground">Истёк</p>
+                      ) : (
+                        <p className="text-sm font-medium text-foreground">Активна до {new Date(inv.expires_at).toLocaleString("ru-RU")}</p>
+                      )}
+                      <p className="text-xs text-muted-foreground">
+                        Роль: {inv.role === "superadmin" ? "Суперадмин" : "Админ"}
+                        {inv.admin_permissions?.length > 0 && ` · ${inv.admin_permissions.map(p => ALL_PERMISSION_TABS.find(t => t.id === p)?.label || p).join(", ")}`}
+                      </p>
+                    </div>
+                    {!used && !expired && (
+                      <Button variant="ghost" size="sm" className="h-8 px-2" onClick={() => {
+                        const url = `${window.location.origin}/invite/${inv.token}`;
+                        navigator.clipboard.writeText(url);
+                        toast.success("Ссылка скопирована");
+                      }}>
+                        <Copy className="h-4 w-4" />
+                      </Button>
+                    )}
+                    <button className="rounded-lg p-2 text-muted-foreground hover:bg-destructive/10 hover:text-destructive transition-colors"
+                      onClick={() => deleteInvite.mutate(inv.id, { onSuccess: () => toast.success("Удалено") })}>
+                      <Trash2 className="h-4 w-4" strokeWidth={1.5} />
+                    </button>
+                  </div>
+                );
+              })
+            )}
+          </div>
+
+          {/* Assign by email */}
+          <div className="space-y-3">
+            <h3 className="text-sm font-medium text-muted-foreground">Назначить по email</h3>
+            <p className="text-xs text-muted-foreground">Можно назначить роль любому зарегистрированному пользователю во вкладке «Участницы» → разверните карточку → «Управление доступом»</p>
+          </div>
+        </div>
+      )}
+
+      {/* ═══════════ Invite dialog ═══════════ */}
+      <Dialog open={inviteDialogOpen} onOpenChange={setInviteDialogOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="font-heading text-xl">Новая инвайт-ссылка</DialogTitle>
+          </DialogHeader>
+          {createdInviteUrl ? (
+            <div className="space-y-4">
+              <p className="text-sm text-foreground">Ссылка создана! Отправьте её сотруднику:</p>
+              <div className="flex items-center gap-2 rounded-lg bg-muted p-3">
+                <code className="flex-1 text-xs break-all">{createdInviteUrl}</code>
+                <Button variant="ghost" size="sm" onClick={() => { navigator.clipboard.writeText(createdInviteUrl); toast.success("Скопировано"); }}>
+                  <Copy className="h-4 w-4" />
+                </Button>
+              </div>
+              <p className="text-xs text-muted-foreground">Ссылка действует 72 часа, одноразовая.</p>
+              <Button className="h-11 w-full" onClick={() => setInviteDialogOpen(false)}>Готово</Button>
+            </div>
+          ) : (
+            <form className="space-y-4" onSubmit={(e) => {
+              e.preventDefault();
+              createInvite.mutate({ role: inviteRole, admin_permissions: inviteRole === "admin" ? invitePerms : [] }, {
+                onSuccess: (inv) => {
+                  const url = `${window.location.origin}/invite/${inv.token}`;
+                  setCreatedInviteUrl(url);
+                },
+                onError: (e) => toast.error(e.message),
+              });
+            }}>
+              <div className="space-y-2">
+                <Label>Роль</Label>
+                <Select value={inviteRole} onValueChange={setInviteRole}>
+                  <SelectTrigger className="h-11"><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="admin">Админ</SelectItem>
+                    <SelectItem value="superadmin">Суперадмин</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              {inviteRole === "admin" && (
+                <div className="space-y-2">
+                  <Label>Доступные разделы</Label>
+                  <div className="flex flex-wrap gap-3">
+                    {ALL_PERMISSION_TABS.filter(t => t.id !== "team").map(tab => (
+                      <label key={tab.id} className="flex items-center gap-2 cursor-pointer">
+                        <Checkbox
+                          checked={invitePerms.includes(tab.id)}
+                          onCheckedChange={(c) => setInvitePerms(c ? [...invitePerms, tab.id] : invitePerms.filter(p => p !== tab.id))}
+                        />
+                        <span className="text-sm">{tab.label}</span>
+                      </label>
+                    ))}
+                  </div>
+                </div>
+              )}
+              <Button type="submit" className="h-11 w-full" disabled={createInvite.isPending}>
+                {createInvite.isPending ? "Создание..." : "Создать ссылку"}
+              </Button>
+            </form>
+          )}
         </DialogContent>
       </Dialog>
 

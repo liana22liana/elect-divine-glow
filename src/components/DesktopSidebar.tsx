@@ -26,7 +26,7 @@ const DesktopSidebar = () => {
           ELECT
         </h1>
         <p className="text-xs text-muted-foreground tracking-widest">
-          by Dasha Avilova
+          by Daria Avilova
         </p>
         <div className="mt-2 h-px w-12 bg-primary/60 rounded-full" />
       </div>

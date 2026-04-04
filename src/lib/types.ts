@@ -41,7 +41,22 @@ export interface Material {
 export type SubscriptionStatus = "active" | "paused" | "cancelled";
 export type AmbassadorStatus = "rising" | "becoming" | "transformed" | "reborn";
 
-export type AdminTabId = "materials" | "structure" | "users" | "recommendations";
+export type AdminTabId = "materials" | "structure" | "users" | "recommendations" | "team";
+
+export interface AdminInvite {
+  id: string;
+  token: string;
+  role: string;
+  admin_permissions: AdminTabId[];
+  created_by: string;
+  created_by_name: string | null;
+  used_by: string | null;
+  used_by_name: string | null;
+  used_by_email: string | null;
+  used_at: string | null;
+  expires_at: string;
+  created_at: string;
+}
 export type UserRole = "user" | "admin" | "superadmin";
 
 export interface UserProfile {

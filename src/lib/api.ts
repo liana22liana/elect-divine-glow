@@ -156,5 +156,15 @@ export const api = {
       delete: (id: string) =>
         request<void>(`/admin/subsections/${id}`, { method: "DELETE" }),
     },
+    invites: {
+      list: () => request<any[]>("/admin/invites"),
+      create: (data: Record<string, any>) =>
+        request<any>("/admin/invites", { method: "POST", body: JSON.stringify(data) }),
+      delete: (id: string) =>
+        request<void>(`/admin/invites/${id}`, { method: "DELETE" }),
+      check: (token: string) => request<any>(`/admin/invites/check/${token}`),
+      accept: (token: string) =>
+        request<any>(`/admin/invites/accept/${token}`, { method: "POST" }),
+    },
   },
 };

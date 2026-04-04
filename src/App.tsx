@@ -13,6 +13,7 @@ import ProfilePage from "@/pages/ProfilePage";
 import GoalsPage from "@/pages/GoalsPage";
 import AdminPage from "@/pages/AdminPage";
 import NotFound from "@/pages/NotFound";
+import InvitePage from "@/pages/InvitePage";
 
 const queryClient = new QueryClient();
 
@@ -46,6 +47,7 @@ const AppRoutes = () => (
       <Route path="/profile" element={<ProfilePage />} />
       <Route path="/admin" element={<AdminRoute><AdminPage /></AdminRoute>} />
     </Route>
+    <Route path="/invite/:token" element={<InvitePage />} />
     <Route path="*" element={<NotFound />} />
   </Routes>
 );
