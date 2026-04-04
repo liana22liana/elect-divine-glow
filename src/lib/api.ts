@@ -153,6 +153,8 @@ export const api = {
       request<void>(`/admin/users/${id}`, { method: "DELETE" }),
     resetUserPassword: (id: string, password: string) =>
       request<any>(`/admin/users/${id}/reset-password`, { method: "POST", body: JSON.stringify({ password }) }),
+    sendAccess: (id: string) =>
+      request<{ ok: boolean; url: string; telegram_sent: boolean }>(`/admin/users/${id}/send-access`, { method: "POST" }),
     deliveryForms: () => request<any[]>("/admin/delivery-forms"),
     exportUsersUrl: () => {
       const token = getToken();

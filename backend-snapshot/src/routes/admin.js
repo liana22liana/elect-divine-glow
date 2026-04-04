@@ -233,6 +233,47 @@ router.delete('/templates/:id', authMiddleware, adminOnly, async (req, res) => {
   catch (err) { console.error(err); res.status(500).json({ error: 'Server error' }); }
 });
 
+// ── Send platform access link ──
+router.post('/users/:id/send-access', authMiddleware, adminOnly, async (req, res) => {
+  try {
+    const user = await pool.query('SELECT id, name, telegram_id, access_token, subscription_status FROM users WHERE id=$1', [req.params.id]);
+    if (!user.rows.length) return res.status(404).json({ error: 'User not found' });
+    const u = user.rows[0];
+
+    // Generate access token if missing
+    let accessToken = u.access_token;
+    if (!accessToken) {
+      const crypto = require('crypto');
+      accessToken = crypto.randomBytes(32).toString('hex');
+      await pool.query('UPDATE users SET access_token=$1 WHERE id=$2', [accessToken, u.id]);
+    }
+
+    const PLATFORM_URL = process.env.PLATFORM_URL || 'https://electplatform.dariaavilova.com';
+    const accessUrl = `${PLATFORM_URL}/access/${accessToken}`;
+
+    // Try to send via Telegram
+    const TG_BOT_TOKEN = process.env.TG_BOT_TOKEN || '';
+    let sent = false;
+    if (u.telegram_id && TG_BOT_TOKEN) {
+      try {
+        const tgRes = await fetch(`https://api.telegram.org/bot${TG_BOT_TOKEN}/sendMessage`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            chat_id: u.telegram_id,
+            text: `\u2728 <b>ELECT Платформа</b>\n\nТвоя персональная ссылка:\n${accessUrl}\n\nСохрани её и добавь на экран «Домой» ❤\uFE0F`,
+            parse_mode: 'HTML',
+          }),
+        });
+        const tgData = await tgRes.json();
+        sent = tgData.ok;
+      } catch (err) { console.error('[send-access] TG error:', err.message); }
+    }
+
+    res.json({ ok: true, url: accessUrl, telegram_sent: sent });
+  } catch (err) { console.error(err); res.status(500).json({ error: 'Server error' }); }
+});
+
 // ── Reset user password (superadmin only) ──
 const { superadminOnly } = require('../middleware/auth');
 const bcryptAdmin = require('bcrypt');

@@ -746,6 +746,44 @@ const AdminPage = () => {
                         </div>
                       )}
 
+                      {/* Send access link */}
+                      <div className="pt-3 border-t border-border flex flex-wrap gap-2">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          className="gap-1.5"
+                          onClick={async () => {
+                            try {
+                              const res = await api.admin.sendAccess(user.id);
+                              if (res.telegram_sent) {
+                                toast.success("Ссылка отправлена в Telegram");
+                              } else {
+                                await navigator.clipboard.writeText(res.url);
+                                toast.success("Ссылка скопирована (ТГ не привязан)");
+                              }
+                            } catch (e: any) { toast.error(e.message); }
+                          }}
+                        >
+                          <Send className="h-3.5 w-3.5" />
+                          Отправить ссылку на платформу
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="gap-1.5"
+                          onClick={async () => {
+                            try {
+                              const res = await api.admin.sendAccess(user.id);
+                              await navigator.clipboard.writeText(res.url);
+                              toast.success("Ссылка скопирована");
+                            } catch (e: any) { toast.error(e.message); }
+                          }}
+                        >
+                          <Copy className="h-3.5 w-3.5" />
+                          Скопировать ссылку
+                        </Button>
+                      </div>
+
                       {/* Delete user button */}
                       {isSuperadmin && user.id !== currentUser?.id && (
                         <div className="pt-3 border-t border-border">
