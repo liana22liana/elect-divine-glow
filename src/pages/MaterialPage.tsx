@@ -47,6 +47,24 @@ const MaterialPage = () => {
   const subsection = section?.subsections.find((sub) => sub.id === material.subsection_id);
   const additionalMaterials = material.additional_materials || [];
 
+  // Convert YouTube URLs to embed format
+  const getEmbedUrl = (url: string) => {
+    if (!url) return url;
+    // youtube.com/watch?v=ID
+    const watchMatch = url.match(/(?:youtube\.com\/watch\?v=)([a-zA-Z0-9_-]+)/);
+    if (watchMatch) return `https://www.youtube.com/embed/${watchMatch[1]}`;
+    // youtu.be/ID
+    const shortMatch = url.match(/(?:youtu\.be\/)([a-zA-Z0-9_-]+)/);
+    if (shortMatch) return `https://www.youtube.com/embed/${shortMatch[1]}`;
+    // youtube.com/shorts/ID
+    const shortsMatch = url.match(/(?:youtube\.com\/shorts\/)([a-zA-Z0-9_-]+)/);
+    if (shortsMatch) return `https://www.youtube.com/embed/${shortsMatch[1]}`;
+    // already embed or other
+    return url;
+  };
+
+  const embedUrl = getEmbedUrl(material.video_url);
+
   return (
     <div className="space-y-6">
       <Link
@@ -62,7 +80,7 @@ const MaterialPage = () => {
         {material.type === "video" && material.video_url ? (
           <div className="aspect-video">
             <iframe
-              src={material.video_url}
+              src={embedUrl}
               className="h-full w-full"
               allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
               allowFullScreen
@@ -128,7 +146,7 @@ const MaterialPage = () => {
           </span>
         </div>
 
-        <p className="text-base leading-relaxed text-foreground/80">
+        <p className="text-base leading-relaxed text-foreground/80 whitespace-pre-line">
           {material.description}
         </p>
       </div>
