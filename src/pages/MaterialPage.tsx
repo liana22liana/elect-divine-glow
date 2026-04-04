@@ -1,9 +1,9 @@
 import { useState, useEffect } from "react";
 import { useParams, Link, useSearchParams, useNavigate } from "react-router-dom";
-import { ArrowLeft, Video, Headphones, Play, Lock } from "lucide-react";
+import { ArrowLeft, Video, Headphones, Play, Lock, CheckCircle, Circle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
-import { useMaterial, useSections } from "@/hooks/useApiData";
+import { useMaterial, useSections, useMaterialProgress, useMarkWatched, useUnmarkWatched } from "@/hooks/useApiData";
 import { useAuth } from "@/contexts/AuthContext";
 import { AMBASSADOR_MILESTONES } from "@/lib/types";
 import type { AmbassadorStatus } from "@/lib/types";
@@ -15,6 +15,10 @@ const MaterialPage = () => {
   const isPreview = searchParams.get("preview") === "1";
   const { data: material, isLoading } = useMaterial(id || "");
   const { data: sections = [] } = useSections();
+  const { data: progressData = [] } = useMaterialProgress();
+  const markWatched = useMarkWatched();
+  const unmarkWatched = useUnmarkWatched();
+  const { user } = useAuth();
   const [showOverlay, setShowOverlay] = useState(false);
 
   useEffect(() => {
@@ -72,8 +76,9 @@ const MaterialPage = () => {
 
   const embedUrl = getEmbedUrl(material.video_url);
 
+  const isWatched = progressData.some(p => String(p.material_id) === String(material?.id));
+
   // Ambassador access check
-  const { user } = useAuth();
   const isAdmin = user?.role === 'admin' || user?.role === 'superadmin';
   const statusOrder: AmbassadorStatus[] = ['rising', 'becoming', 'transformed', 'reborn'];
   const userStatusIdx = user?.ambassador_status ? statusOrder.indexOf(user.ambassador_status) : -1;
@@ -193,6 +198,22 @@ const MaterialPage = () => {
         <p className="text-base leading-relaxed text-foreground/80 whitespace-pre-line">
           {material.description}
         </p>
+
+        {/* Watch progress toggle */}
+        <button
+          onClick={() => isWatched ? unmarkWatched.mutate(String(material.id)) : markWatched.mutate(String(material.id))}
+          className={`flex items-center gap-2 rounded-xl px-4 py-2.5 text-sm font-medium transition-colors ${
+            isWatched
+              ? 'bg-green-50 text-green-700 hover:bg-green-100'
+              : 'bg-muted text-muted-foreground hover:bg-muted/80'
+          }`}
+        >
+          {isWatched ? (
+            <><CheckCircle className="h-4 w-4" /> Просмотрено</>
+          ) : (
+            <><Circle className="h-4 w-4" /> Отметить просмотренным</>
+          )}
+        </button>
       </div>
 
       {additionalMaterials.map((am) => (

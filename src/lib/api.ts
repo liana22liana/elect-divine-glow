@@ -86,6 +86,9 @@ export const api = {
       return request<any[]>(`/materials${q ? `?${q}` : ""}`);
     },
     get: (id: string) => request<any>(`/materials/${id}`),
+    progress: () => request<any[]>("/materials/progress"),
+    markWatched: (id: string) => request<any>(`/materials/${id}/watched`, { method: "POST" }),
+    unmarkWatched: (id: string) => request<void>(`/materials/${id}/watched`, { method: "DELETE" }),
     create: (data: Record<string, any>) =>
       request<any>("/admin/materials", { method: "POST", body: JSON.stringify(data) }),
     update: (id: string, data: Record<string, any>) =>

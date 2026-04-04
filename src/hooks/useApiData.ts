@@ -23,6 +23,29 @@ export const useMaterial = (id: string) =>
     enabled: !!id,
   });
 
+// ── Progress ──
+export const useMaterialProgress = () =>
+  useQuery<{ material_id: string; watched_at: string }[]>({
+    queryKey: ["materialProgress"],
+    queryFn: api.materials.progress,
+  });
+
+export const useMarkWatched = () => {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string) => api.materials.markWatched(id),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["materialProgress"] }),
+  });
+};
+
+export const useUnmarkWatched = () => {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string) => api.materials.unmarkWatched(id),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["materialProgress"] }),
+  });
+};
+
 // ── Profile ──
 export const useProfile = () =>
   useQuery<UserProfile>({

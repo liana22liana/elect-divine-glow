@@ -1,5 +1,7 @@
 const router = require('express').Router();
 const pool = require('../db/pool');
+const { authMiddleware } = require('../middleware/auth');
+
 router.get('/', async (req, res) => {
   try {
     const { section_id, subsection_id, limit = 50, offset = 0 } = req.query;
@@ -20,4 +22,31 @@ router.get('/:id', async (req, res) => {
     res.json({ ...mat.rows[0], additional_materials: additional.rows });
   } catch (err) { console.error(err); res.status(500).json({ error: 'Server error' }); }
 });
+// ── Progress tracking ──
+router.get('/progress', authMiddleware, async (req, res) => {
+  try {
+    const result = await pool.query('SELECT material_id, watched_at FROM material_progress WHERE user_id=$1', [req.userId]);
+    res.json(result.rows);
+  } catch (err) { console.error(err); res.status(500).json({ error: 'Server error' }); }
+});
+
+router.post('/:id/watched', authMiddleware, async (req, res) => {
+  try {
+    const result = await pool.query(
+      `INSERT INTO material_progress (user_id, material_id) VALUES ($1,$2)
+       ON CONFLICT (user_id, material_id) DO UPDATE SET watched_at=NOW()
+       RETURNING *`,
+      [req.userId, req.params.id]
+    );
+    res.json(result.rows[0]);
+  } catch (err) { console.error(err); res.status(500).json({ error: 'Server error' }); }
+});
+
+router.delete('/:id/watched', authMiddleware, async (req, res) => {
+  try {
+    await pool.query('DELETE FROM material_progress WHERE user_id=$1 AND material_id=$2', [req.userId, req.params.id]);
+    res.json({ ok: true });
+  } catch (err) { console.error(err); res.status(500).json({ error: 'Server error' }); }
+});
+
 module.exports = router;

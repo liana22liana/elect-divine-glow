@@ -5,11 +5,12 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { cn } from "@/lib/utils";
 import { Switch } from "@/components/ui/switch";
 import { Eye } from "lucide-react";
-import { useMaterials, useSections } from "@/hooks/useApiData";
+import { useMaterials, useSections, useMaterialProgress } from "@/hooks/useApiData";
 import { useAuth } from "@/contexts/AuthContext";
 import { AMBASSADOR_MILESTONES } from "@/lib/types";
 import type { AmbassadorStatus } from "@/lib/types";
-import { Lock, Gift } from "lucide-react";
+import { Lock, Gift, Search } from "lucide-react";
+import { Input } from "@/components/ui/input";
 
 const LibraryPage = () => {
   const [searchParams, setSearchParams] = useSearchParams();
@@ -26,14 +27,19 @@ const LibraryPage = () => {
     localStorage.setItem(PREVIEW_KEY, String(previewEnabled));
   }, [previewEnabled, PREVIEW_KEY]);
 
+  const [searchQuery, setSearchQuery] = useState("");
   const { data: sections = [], isLoading: loadingSec } = useSections();
   const { data: materials = [], isLoading: loadingMat } = useMaterials();
+  const { data: progress = [] } = useMaterialProgress();
+  const watchedIds = new Set(progress.map(p => String(p.material_id)));
 
   const currentSection = sections.find((s) => String(s.id) === activeSection);
   const hasSubsections = currentSection && currentSection.subsections.length > 0;
 
   const filtered = materials.filter((m) => {
     if (!m.is_published) return false;
+    // Search filter
+    if (searchQuery.trim() && !m.title.toLowerCase().includes(searchQuery.toLowerCase())) return false;
     // Exclude bonus (ambassador-locked) materials from main list — they show in bonus section
     if (activeSection === "all" && m.required_ambassador_status) return false;
     if (activeSection === "all") return true;
@@ -71,6 +77,17 @@ const LibraryPage = () => {
           <span className="text-sm text-muted-foreground">Превью</span>
           <Switch checked={previewEnabled} onCheckedChange={setPreviewEnabled} />
         </label>
+      </div>
+
+      {/* Search */}
+      <div className="relative">
+        <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+        <Input
+          placeholder="Поиск материалов..."
+          className="h-10 pl-9"
+          value={searchQuery}
+          onChange={(e) => setSearchQuery(e.target.value)}
+        />
       </div>
 
       {/* Section tabs */}
@@ -151,7 +168,7 @@ const LibraryPage = () => {
       ) : (
         <div className={previewEnabled ? "grid grid-cols-1 gap-5 md:grid-cols-2 lg:grid-cols-3" : "flex flex-col gap-3"}>
           {filtered.map((material) => (
-            <MaterialCard key={material.id} material={material} previewEnabled={previewEnabled} />
+            <MaterialCard key={material.id} material={material} previewEnabled={previewEnabled} watched={watchedIds.has(String(material.id))} />
           ))}
         </div>
       )}
@@ -187,7 +204,7 @@ const LibraryPage = () => {
             </div>
             <div className={previewEnabled ? "grid grid-cols-1 gap-5 md:grid-cols-2 lg:grid-cols-3" : "flex flex-col gap-3"}>
               {bonusMaterials.map((material) => (
-                <MaterialCard key={material.id} material={material} previewEnabled={previewEnabled} />
+                <MaterialCard key={material.id} material={material} previewEnabled={previewEnabled} watched={watchedIds.has(String(material.id))} />
               ))}
             </div>
           </section>

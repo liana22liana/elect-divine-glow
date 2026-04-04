@@ -1,4 +1,4 @@
-import { Video, Headphones, Lock } from "lucide-react";
+import { Video, Headphones, Lock, CheckCircle } from "lucide-react";
 import { Link } from "react-router-dom";
 import { AMBASSADOR_MILESTONES } from "@/lib/types";
 import type { Material } from "@/lib/types";
@@ -23,6 +23,7 @@ const SECTION_GRADIENTS: Record<string, string> = {
 interface MaterialCardProps {
   material: Material;
   previewEnabled?: boolean;
+  watched?: boolean;
 }
 
 // Extract YouTube video ID from any URL format
@@ -41,7 +42,7 @@ const getYoutubeThumbnail = (url: string): string | null => {
   return null;
 };
 
-const MaterialCard = ({ material, previewEnabled = false }: MaterialCardProps) => {
+const MaterialCard = ({ material, previewEnabled = false, watched = false }: MaterialCardProps) => {
   const { data: sections = [] } = useSections();
   const { user } = useAuth();
   const section = sections.find((s) => s.id === material.section_id);
@@ -86,6 +87,7 @@ const MaterialCard = ({ material, previewEnabled = false }: MaterialCardProps) =
         <span className="flex-shrink-0 text-xs text-muted-foreground">
           {new Date(material.created_at).toLocaleDateString("ru-RU")}
         </span>
+        {watched && !isLocked && <CheckCircle className="h-4 w-4 flex-shrink-0 text-green-500" strokeWidth={1.5} />}
         {isLocked && <Lock className="h-4 w-4 flex-shrink-0 text-muted-foreground" strokeWidth={1.5} />}
       </div>
     );
@@ -137,6 +139,11 @@ const MaterialCard = ({ material, previewEnabled = false }: MaterialCardProps) =
             </span>
           )}
         </div>
+        {watched && !isLocked && (
+          <div className="absolute left-3 top-3">
+            <CheckCircle className="h-5 w-5 text-green-500 drop-shadow" strokeWidth={2} />
+          </div>
+        )}
         {isLocked && (
           <div className="absolute inset-0 flex items-center justify-center bg-foreground/30 backdrop-blur-[2px]">
             <Lock className="h-8 w-8 text-secondary" strokeWidth={1.5} />
