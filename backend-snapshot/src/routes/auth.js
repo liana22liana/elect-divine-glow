@@ -77,7 +77,7 @@ router.post('/login', rateLimiter, async (req, res) => {
 
 router.post('/logout', (req, res) => res.json({ ok: true }));
 
-// ── Magic link auth (for club members via bot) ──
+// ── Magic link auth (legacy, non-one-time — сохраняем для TargetHunter) ──
 router.get('/access/:token', async (req, res) => {
   try {
     const result = await pool.query(
@@ -88,6 +88,82 @@ router.get('/access/:token', async (req, res) => {
     const user = formatUser(result.rows[0]);
     res.json({ user, token: generateToken(user.id) });
   } catch (err) { console.error(err); res.status(500).json({ error: 'Server error' }); }
+});
+
+// ── Magic link auth v2 (одноразовый, через magic_links) ──
+// GET  /api/auth/magic/:token  — проверить токен (preview без сжигания)
+// POST /api/auth/magic/:token  — сжечь токен, вернуть JWT
+router.get('/magic/:token', async (req, res) => {
+  try {
+    const r = await pool.query(
+      `SELECT ml.id, ml.user_id, ml.used, ml.expires_at, ml.bound_tg_id, u.telegram_id
+         FROM magic_links ml
+         JOIN users u ON u.id = ml.user_id
+        WHERE ml.token=$1`,
+      [req.params.token]
+    );
+    if (!r.rows.length) return res.status(404).json({ error: 'invalid_token' });
+    const row = r.rows[0];
+    if (row.used) return res.status(410).json({ error: 'token_used' });
+    if (row.expires_at && new Date(row.expires_at) < new Date()) {
+      return res.status(410).json({ error: 'token_expired' });
+    }
+    res.json({ ok: true, telegram_id: row.telegram_id });
+  } catch (err) { console.error(err); res.status(500).json({ error: 'Server error' }); }
+});
+
+router.post('/magic/:token', rateLimiter, async (req, res) => {
+  const client = await pool.connect();
+  try {
+    await client.query('BEGIN');
+
+    // SELECT ... FOR UPDATE — защита от race condition (двойное сжигание)
+    const r = await client.query(
+      `SELECT id, user_id, used, expires_at, bound_tg_id
+         FROM magic_links
+        WHERE token=$1
+        FOR UPDATE`,
+      [req.params.token]
+    );
+    if (!r.rows.length) {
+      await client.query('ROLLBACK');
+      return res.status(404).json({ error: 'invalid_token' });
+    }
+    const row = r.rows[0];
+    if (row.used) {
+      await client.query('ROLLBACK');
+      return res.status(410).json({ error: 'token_used' });
+    }
+    if (row.expires_at && new Date(row.expires_at) < new Date()) {
+      await client.query('ROLLBACK');
+      return res.status(410).json({ error: 'token_expired' });
+    }
+
+    // Сжигаем токен и привязываем к пользователю
+    await client.query(
+      `UPDATE magic_links
+          SET used=true, used_at=NOW(),
+              bound_tg_id=(SELECT telegram_id FROM users WHERE id=$1)
+        WHERE id=$2`,
+      [row.user_id, row.id]
+    );
+
+    const u = await client.query(
+      `SELECT ${USER_FIELDS} FROM users WHERE id=$1`,
+      [row.user_id]
+    );
+    await client.query('COMMIT');
+
+    if (!u.rows.length) return res.status(404).json({ error: 'user_not_found' });
+    const user = formatUser(u.rows[0]);
+    res.json({ user, token: generateToken(user.id) });
+  } catch (err) {
+    await client.query('ROLLBACK').catch(() => {});
+    console.error('[magic] error', err);
+    res.status(500).json({ error: 'Server error' });
+  } finally {
+    client.release();
+  }
 });
 
 // ── Password reset via Telegram ──

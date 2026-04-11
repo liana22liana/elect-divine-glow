@@ -1,6 +1,8 @@
 const router = require('express').Router();
 const pool = require('../db/pool');
-const { authMiddleware, adminOnly } = require('../middleware/auth');
+const { authMiddleware, adminOnly, superadminOnly } = require('../middleware/auth');
+const webhookModule = require('./webhook');
+const { sendMagicLinkToUser, createMagicLink, isPlatformActive } = webhookModule;
 
 const USER_FIELDS = 'id, email, name, avatar_url, subscription_status, subscription_start AS subscription_start_date, subscription_end AS subscription_end_date, ambassador_status, ambassador_status_override, delivery_form_submitted, role, admin_permissions, created_at';
 
@@ -275,7 +277,6 @@ router.post('/users/:id/send-access', authMiddleware, adminOnly, async (req, res
 });
 
 // ── Reset user password (superadmin only) ──
-const { superadminOnly } = require('../middleware/auth');
 const bcryptAdmin = require('bcrypt');
 
 router.post('/users/:id/reset-password', authMiddleware, superadminOnly, async (req, res) => {
@@ -304,6 +305,144 @@ router.delete('/users/:id', authMiddleware, superadminOnly, async (req, res) => 
     await pool.query('DELETE FROM admin_invites WHERE used_by=$1', [userId]);
     await pool.query('DELETE FROM users WHERE id=$1', [userId]);
     res.status(204).end();
+  } catch (err) { console.error(err); res.status(500).json({ error: 'Server error' }); }
+});
+
+// ══════════════════════════════════════════════════════════════
+// Task #4 — Переключатель «Платформа активна»  (superadmin only)
+// ══════════════════════════════════════════════════════════════
+router.get('/settings', authMiddleware, adminOnly, async (req, res) => {
+  try {
+    const r = await pool.query('SELECT key, value FROM settings');
+    const obj = {};
+    for (const row of r.rows) obj[row.key] = row.value;
+    // Удобное булево представление
+    obj.platform_active = obj.platform_active === 'true';
+    res.json(obj);
+  } catch (err) { console.error(err); res.status(500).json({ error: 'Server error' }); }
+});
+
+router.put('/settings/platform-active', authMiddleware, superadminOnly, async (req, res) => {
+  try {
+    const { active } = req.body;
+    if (typeof active !== 'boolean') {
+      return res.status(400).json({ error: 'active must be boolean' });
+    }
+    await pool.query(
+      `INSERT INTO settings (key, value, updated_at)
+       VALUES ('platform_active', $1, NOW())
+       ON CONFLICT (key) DO UPDATE SET value=EXCLUDED.value, updated_at=NOW()`,
+      [active ? 'true' : 'false']
+    );
+
+    let broadcast = 0;
+    // При переключении в ON — разово шлём magic link всем активным
+    if (active) {
+      const activeUsers = await pool.query(
+        `SELECT id, telegram_id, name
+           FROM users
+          WHERE subscription_status='active' AND telegram_id IS NOT NULL`
+      );
+      for (const u of activeUsers.rows) {
+        try {
+          const ok = await sendMagicLinkToUser(u);
+          if (ok) broadcast++;
+        } catch (e) {
+          console.error('[settings] broadcast error for user', u.id, e.message);
+        }
+      }
+      console.log(`[settings] platform_active=true → broadcast sent to ${broadcast}/${activeUsers.rows.length}`);
+    }
+
+    res.json({ ok: true, platform_active: active, broadcast_sent: broadcast });
+  } catch (err) { console.error(err); res.status(500).json({ error: 'Server error' }); }
+});
+
+// ══════════════════════════════════════════════════════════════
+// Task #5 — Ручное добавление участницы (GetCourse / PayPal)
+// ══════════════════════════════════════════════════════════════
+router.post('/users/manual', authMiddleware, adminOnly, async (req, res) => {
+  try {
+    const { tg_id, name, email, tariff, subscription_end } = req.body;
+    if (!tg_id) return res.status(400).json({ error: 'tg_id required' });
+    if (!subscription_end) return res.status(400).json({ error: 'subscription_end required' });
+
+    const tgIdNum = String(tg_id).trim();
+    const endDate = new Date(subscription_end);
+    if (isNaN(endDate.getTime())) {
+      return res.status(400).json({ error: 'invalid subscription_end date' });
+    }
+
+    const existing = await pool.query(
+      'SELECT id FROM users WHERE telegram_id=$1',
+      [tgIdNum]
+    );
+
+    let userId;
+    if (existing.rows.length) {
+      userId = existing.rows[0].id;
+      await pool.query(
+        `UPDATE users
+            SET subscription_status='active',
+                subscription_start=COALESCE(subscription_start, NOW()),
+                subscription_end=$1,
+                name=CASE WHEN (name='' OR name IS NULL) AND $2<>'' THEN $2 ELSE name END,
+                email=COALESCE($3, email),
+                tariff=COALESCE($4, tariff),
+                source='manual'
+          WHERE id=$5`,
+        [endDate, name || '', email || null, tariff || null, userId]
+      );
+    } else {
+      const crypto = require('crypto');
+      const accessToken = crypto.randomBytes(32).toString('hex');
+      const r = await pool.query(
+        `INSERT INTO users
+           (email, password_hash, name, telegram_id, access_token,
+            subscription_status, subscription_start, subscription_end,
+            tariff, source)
+         VALUES ($1, '', $2, $3, $4,
+                 'active', NOW(), $5, $6, 'manual')
+         RETURNING id`,
+        [email || null, name || '', tgIdNum, accessToken, endDate, tariff || null]
+      );
+      userId = r.rows[0].id;
+    }
+
+    // Отправляем magic link, если платформа активна
+    let magicSent = false;
+    if (await isPlatformActive()) {
+      const u = await pool.query('SELECT id, telegram_id FROM users WHERE id=$1', [userId]);
+      magicSent = await sendMagicLinkToUser(u.rows[0]);
+    }
+
+    const full = await pool.query(
+      `SELECT ${USER_FIELDS} FROM users WHERE id=$1`, [userId]
+    );
+    res.json({
+      ok: true,
+      user: { ...full.rows[0], subscription_active: true },
+      magic_link_sent: magicSent,
+      platform_active: await isPlatformActive(),
+    });
+  } catch (err) {
+    console.error('[admin/users/manual]', err);
+    res.status(500).json({ error: 'Server error', detail: err.message });
+  }
+});
+
+// Ресенд magic link на существующую участницу
+router.post('/users/:id/resend-magic', authMiddleware, adminOnly, async (req, res) => {
+  try {
+    const r = await pool.query(
+      'SELECT id, telegram_id, subscription_status FROM users WHERE id=$1',
+      [req.params.id]
+    );
+    if (!r.rows.length) return res.status(404).json({ error: 'Not found' });
+    const user = r.rows[0];
+    if (!user.telegram_id) return res.status(400).json({ error: 'no telegram_id' });
+    const sent = await sendMagicLinkToUser(user);
+    res.json({ ok: true, sent });
   } catch (err) { console.error(err); res.status(500).json({ error: 'Server error' }); }
 });
 

@@ -54,4 +54,12 @@ app.get('*', (req, res) => {
   }
 });
 
-app.listen(PORT, '0.0.0.0', () => console.log(`ELECT API running on port ${PORT}`));
+app.listen(PORT, '0.0.0.0', () => {
+  console.log(`ELECT API running on port ${PORT}`);
+  // Task #6 — проверка истечения подписок раз в сутки
+  try { require('./jobs/subscription-expiry').start(); }
+  catch (e) { console.error('[expiry] failed to start:', e.message); }
+  // Task #3 — Telegram бот @ElectPortal_bot (/access)
+  try { require('./jobs/telegram-bot').start(); }
+  catch (e) { console.error('[bot] failed to start:', e.message); }
+});
