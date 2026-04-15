@@ -2,7 +2,6 @@ const API_BASE = window.location.hostname === "localhost"
   ? "http://localhost:3000/api"
   : "/api";
 
-// Safari-safe token storage: localStorage with sessionStorage fallback
 export function getToken(): string | null {
   try {
     return localStorage.getItem("elect_token") || sessionStorage.getItem("elect_token");
@@ -12,12 +11,8 @@ export function getToken(): string | null {
 }
 
 export function setToken(token: string) {
-  try {
-    localStorage.setItem("elect_token", token);
-  } catch {}
-  try {
-    sessionStorage.setItem("elect_token", token);
-  } catch {}
+  try { localStorage.setItem("elect_token", token); } catch {}
+  try { sessionStorage.setItem("elect_token", token); } catch {}
 }
 
 export function clearToken() {
@@ -43,9 +38,13 @@ async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
     throw err;
   }
 
+  // Handle 204 No Content
   if (res.status === 204) return undefined as T;
+
   return res.json();
 }
+
+// ── Auth ──
 
 export const api = {
   auth: {
@@ -60,7 +59,6 @@ export const api = {
         body: JSON.stringify({ email, password, name }),
       }),
     me: () => request<any>("/auth/me"),
-    // New magic link endpoint (one-time token from magic_links table)
     accessLink: (token: string) =>
       request<{ token: string; user: any }>(`/auth/magic/${token}`),
     forgotPassword: (email: string) =>
@@ -75,90 +73,131 @@ export const api = {
       }),
   },
 
+  // ── Profile ──
   profile: {
     get: () => request<any>("/profile"),
     update: (data: Record<string, any>) =>
       request<any>("/profile", { method: "PUT", body: JSON.stringify(data) }),
   },
 
+  // ── Sections ──
   sections: {
     list: () => request<any[]>("/sections"),
   },
 
+  // ── Materials ──
   materials: {
-    list: (params?: Record<string, any>) => {
-      const q = params ? "?" + new URLSearchParams(params).toString() : "";
-      return request<any[]>(`/materials${q}`);
+    list: (params?: { section_id?: string; subsection_id?: string }) => {
+      const qs = new URLSearchParams();
+      if (params?.section_id) qs.set("section_id", params.section_id);
+      if (params?.subsection_id) qs.set("subsection_id", params.subsection_id);
+      const q = qs.toString();
+      return request<any[]>(`/materials${q ? `?${q}` : ""}`);
     },
-    get: (id: number) => request<any>(`/materials/${id}`),
-    markWatched: (id: number) =>
-      request<any>(`/materials/${id}/watched`, { method: "POST" }),
-    unmarkWatched: (id: number) =>
-      request<any>(`/materials/${id}/watched`, { method: "DELETE" }),
-    getProgress: () => request<any[]>("/materials/progress"),
-    timecodes: (id: string) => request<any[]>(`/materials/${id}/timecodes`),
+    get: (id: string) => request<any>(`/materials/${id}`),
+    progress: () => request<any[]>("/materials/progress"),
+    markWatched: (id: string) => request<any>(`/materials/${id}/watched`, { method: "POST" }),
+    unmarkWatched: (id: string) => request<void>(`/materials/${id}/watched`, { method: "DELETE" }),
+    create: (data: Record<string, any>) =>
+      request<any>("/admin/materials", { method: "POST", body: JSON.stringify(data) }),
+    update: (id: string, data: Record<string, any>) =>
+      request<any>(`/admin/materials/${id}`, { method: "PUT", body: JSON.stringify(data) }),
+    delete: (id: string) =>
+      request<void>(`/admin/materials/${id}`, { method: "DELETE" }),
   },
 
+  // ── Habits ──
   habits: {
     list: () => request<any[]>("/habits"),
-    create: (data: any) =>
+    create: (data: Record<string, any>) =>
       request<any>("/habits", { method: "POST", body: JSON.stringify(data) }),
-    update: (id: number, data: any) =>
+    update: (id: string, data: Record<string, any>) =>
       request<any>(`/habits/${id}`, { method: "PUT", body: JSON.stringify(data) }),
-    delete: (id: number) =>
+    delete: (id: string) =>
       request<void>(`/habits/${id}`, { method: "DELETE" }),
-    toggle: (id: number, date: string) =>
-      request<any>(`/habits/${id}/toggle`, { method: "POST", body: JSON.stringify({ date }) }),
+    logs: (habitId: string) => request<any[]>(`/habits/${habitId}/logs`),
+    markLog: (habitId: string, date: string) =>
+      request<any>(`/habits/${habitId}/logs`, {
+        method: "POST",
+        body: JSON.stringify({ date }),
+      }),
+    toggleLog: (habitId: string, date: string, completed: boolean) =>
+      request<any>(`/habits/${habitId}/logs`, {
+        method: "POST",
+        body: JSON.stringify({ date, completed }),
+      }),
     templates: () => request<any[]>("/habits/templates"),
   },
 
-  ambassador: {
-    status: () => request<any>("/ambassador/status"),
+  // ── Habit Templates ──
+  templates: {
+    list: () => request<any[]>("/admin/templates"),
+    create: (data: Record<string, any>) =>
+      request<any>("/admin/templates", { method: "POST", body: JSON.stringify(data) }),
+    delete: (id: string) =>
+      request<void>(`/admin/templates/${id}`, { method: "DELETE" }),
   },
 
+  // ── Ambassador ──
+  ambassador: {
+    gifts: () => request<any[]>("/ambassador/gifts"),
+    claim: (giftId: string) =>
+      request<any>(`/ambassador/gifts/${giftId}/claim`, { method: "POST" }),
+  },
+
+  // ── Delivery ──
   delivery: {
-    submit: (data: any) =>
+    submit: (data: Record<string, any>) =>
       request<any>("/delivery-form", { method: "POST", body: JSON.stringify(data) }),
   },
 
+  // ── Admin ──
   admin: {
     stats: () => request<any>("/admin/stats"),
     users: () => request<any[]>("/admin/users"),
-    createUser: (data: any) =>
-      request<any>("/admin/users", { method: "POST", body: JSON.stringify(data) }),
-    updateUser: (id: number, data: any) =>
-      request<any>(`/admin/users/${id}`, { method: "PUT", body: JSON.stringify(data) }),
     materials: () => request<any[]>("/admin/materials"),
-    createMaterial: (data: any) =>
-      request<any>("/admin/materials", { method: "POST", body: JSON.stringify(data) }),
-    updateMaterial: (id: number, data: any) =>
-      request<any>(`/admin/materials/${id}`, { method: "PUT", body: JSON.stringify(data) }),
-    deleteMaterial: (id: number) =>
-      request<void>(`/admin/materials/${id}`, { method: "DELETE" }),
-    sections: () => request<any[]>("/admin/sections"),
-    createSection: (data: any) =>
-      request<any>("/admin/sections", { method: "POST", body: JSON.stringify(data) }),
-    updateSection: (id: number, data: any) =>
-      request<any>(`/admin/sections/${id}`, { method: "PUT", body: JSON.stringify(data) }),
-    deleteSection: (id: number) =>
-      request<void>(`/admin/sections/${id}`, { method: "DELETE" }),
-    subsections: (sectionId?: number) => {
-      const q = sectionId ? `?section_id=${sectionId}` : "";
-      return request<any[]>(`/admin/subsections${q}`);
-    },
-    invites: () => request<any[]>("/admin/invites"),
-    createInvite: (data: any) =>
-      request<any>("/admin/invites", { method: "POST", body: JSON.stringify(data) }),
-    deleteInvite: (id: number) =>
-      request<void>(`/admin/invites/${id}`, { method: "DELETE" }),
+    updateUser: (id: string, data: Record<string, any>) =>
+      request<any>(`/admin/users/${id}`, { method: "PUT", body: JSON.stringify(data) }),
+    deleteUser: (id: string) =>
+      request<void>(`/admin/users/${id}`, { method: "DELETE" }),
+    resetUserPassword: (id: string, password: string) =>
+      request<any>(`/admin/users/${id}/reset-password`, { method: "POST", body: JSON.stringify({ password }) }),
+    sendAccess: (id: string) =>
+      request<{ ok: boolean; url: string; telegram_sent: boolean }>(`/admin/users/${id}/send-access`, { method: "POST" }),
     deliveryForms: () => request<any[]>("/admin/delivery-forms"),
-    exportUsers: () => `${API_BASE}/admin/users/export`,
-    getTimecodes: (materialId: number) => request<any[]>(`/admin/materials/${materialId}/timecodes`),
-    createTimecode: (materialId: number, data: any) => request<any>(`/admin/materials/${materialId}/timecodes`, { method: "POST", body: JSON.stringify(data) }),
-    updateTimecode: (id: number, data: any) => request<any>(`/admin/timecodes/${id}`, { method: "PUT", body: JSON.stringify(data) }),
-    deleteTimecode: (id: number) => request<void>(`/admin/timecodes/${id}`, { method: "DELETE" }),
-    settings: () => request<any>("/admin/settings"),
-    updateSetting: (key: string, value: any) =>
-      request<any>("/admin/settings", { method: "POST", body: JSON.stringify({ key, value }) }),
+    exportUsersUrl: () => {
+      const token = getToken();
+      return `${API_BASE}/admin/users/export${token ? `?token=${token}` : ''}`;
+    },
+    addAdditionalMaterial: (materialId: string, data: Record<string, any>) =>
+      request<any>(`/admin/materials/${materialId}/additional`, { method: "POST", body: JSON.stringify(data) }),
+    deleteAdditionalMaterial: (id: string) =>
+      request<void>(`/admin/additional/${id}`, { method: "DELETE" }),
+    sections: {
+      create: (data: Record<string, any>) =>
+        request<any>("/admin/sections", { method: "POST", body: JSON.stringify(data) }),
+      update: (id: string, data: Record<string, any>) =>
+        request<any>(`/admin/sections/${id}`, { method: "PUT", body: JSON.stringify(data) }),
+      delete: (id: string) =>
+        request<void>(`/admin/sections/${id}`, { method: "DELETE" }),
+    },
+    subsections: {
+      create: (data: Record<string, any>) =>
+        request<any>("/admin/subsections", { method: "POST", body: JSON.stringify(data) }),
+      update: (id: string, data: Record<string, any>) =>
+        request<any>(`/admin/subsections/${id}`, { method: "PUT", body: JSON.stringify(data) }),
+      delete: (id: string) =>
+        request<void>(`/admin/subsections/${id}`, { method: "DELETE" }),
+    },
+    invites: {
+      list: () => request<any[]>("/admin/invites"),
+      create: (data: Record<string, any>) =>
+        request<any>("/admin/invites", { method: "POST", body: JSON.stringify(data) }),
+      delete: (id: string) =>
+        request<void>(`/admin/invites/${id}`, { method: "DELETE" }),
+      check: (token: string) => request<any>(`/admin/invites/check/${token}`),
+      accept: (token: string) =>
+        request<any>(`/admin/invites/accept/${token}`, { method: "POST" }),
+    },
   },
 };

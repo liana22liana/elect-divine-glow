@@ -27,7 +27,7 @@ export const useMaterial = (id: string) =>
 export const useMaterialProgress = () =>
   useQuery<{ material_id: string; watched_at: string }[]>({
     queryKey: ["materialProgress"],
-    queryFn: api.materials.progress,
+    queryFn: api.materials.getProgress,
   });
 
 export const useMarkWatched = () => {

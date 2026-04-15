@@ -40,7 +40,7 @@ import {
 } from "@/hooks/useApiData";
 import { api } from "@/lib/api";
 
-type TabId = AdminTabId;
+type TabId = AdminTabId | "newbies";
 
 type DeleteTarget = {
   type: "material" | "section" | "subsection" | "template" | "user";
@@ -66,6 +66,7 @@ const AdminPage = () => {
     { id: "users" as const, label: "Участницы", icon: UsersIcon },
     { id: "recommendations" as const, label: "Рекомендации", icon: Sparkles },
     ...(isSuperadmin ? [{ id: "team" as const, label: "Команда", icon: UserPlus }] : []),
+    ...(isSuperadmin ? [{ id: "newbies" as const, label: "Новеньким", icon: Sparkles }] : []),
   ];
 
   const visibleTabs = isSuperadmin
@@ -116,6 +117,28 @@ const AdminPage = () => {
   const [recCategory, setRecCategory] = useState("");
   const [recSourceId, setRecSourceId] = useState("");
 
+
+  // ── Newbies tab state ──
+  const [newbiesItems, setNewbiesItems] = useState<any[]>([]);
+  const [newbiesLoading, setNewbiesLoading] = useState(false);
+  const [newbiesDialogOpen, setNewbiesDialogOpen] = useState(false);
+  const [editingNewbie, setEditingNewbie] = useState<any | null>(null);
+  const [newbieTitle, setNewbieTitle] = useState("");
+  const [newbieContent, setNewbieContent] = useState("");
+  const [newbieLink, setNewbieLink] = useState("");
+  const [newbieLinkLabel, setNewbieLinkLabel] = useState("");
+  const [newbieOrder, setNewbieOrder] = useState(0);
+  const [savingNewbie, setSavingNewbie] = useState(false);
+
+  // ── Platform toggle + Add user ──
+  const [platformActive, setPlatformActive] = useState<boolean>(false);
+  const [addUserOpen, setAddUserOpen] = useState(false);
+  const [newUserTgId, setNewUserTgId] = useState("");
+  const [newUserName, setNewUserName] = useState("");
+  const [newUserEmail, setNewUserEmail] = useState("");
+  const [newUserEndDate, setNewUserEndDate] = useState("");
+  const [addingUser, setAddingUser] = useState(false);
+
   // ── Data queries ──
   const { data: sections = [], isLoading: loadingSec } = useSections();
   const { data: materials = [], isLoading: loadingMat } = useAdminMaterials();
@@ -123,6 +146,26 @@ const AdminPage = () => {
   const { data: templates = [], isLoading: loadingTemplates } = useAdminTemplates();
   const { data: stats } = useAdminStats();
   const { data: deliveryForms = [] } = useAdminDeliveryForms();
+
+
+  // Load newbies items
+  const loadNewbies = () => {
+    setNewbiesLoading(true);
+    fetch("/api/newbies/admin", {
+      headers: { Authorization: `Bearer ${localStorage.getItem("elect_token") || sessionStorage.getItem("elect_token")}` }
+    })
+      .then(r => r.json())
+      .then(data => { setNewbiesItems(Array.isArray(data) ? data : []); setNewbiesLoading(false); })
+      .catch(() => setNewbiesLoading(false));
+  };
+  useEffect(() => { if (activeTab === "newbies") loadNewbies(); }, [activeTab]);
+
+  // Load platform active status
+  useEffect(() => {
+    api.admin.settings().then((s: any) => {
+      setPlatformActive(s.platform_active === "true" || s.platform_active === true);
+    }).catch(() => {});
+  }, []);
 
   // Material filters
   const [matSearchQuery, setMatSearchQuery] = useState("");
@@ -387,16 +430,49 @@ const AdminPage = () => {
             Создать ссылку
           </Button>
         )}
-        {activeTab === "users" && (
-          <Button variant="outline" className="h-11 gap-2 rounded-lg" onClick={() => {
-            const url = api.admin.exportUsersUrl();
-            window.open(url, '_blank');
+        {activeTab === "newbies" && isSuperadmin && (
+          <Button className="h-11 gap-2 rounded-lg" onClick={() => {
+            setEditingNewbie(null); setNewbieTitle(""); setNewbieContent(""); setNewbieLink(""); setNewbieLinkLabel(""); setNewbieOrder(newbiesItems.length);
+            setNewbiesDialogOpen(true);
           }}>
-            <Download className="h-4 w-4" strokeWidth={1.5} />
-            CSV
+            <Plus className="h-4 w-4" strokeWidth={1.5} />
+            Добавить раздел
           </Button>
         )}
+        {activeTab === "users" && (
+          <>
+            <Button variant="outline" className="h-11 gap-2 rounded-lg" onClick={() => {
+              const url = api.admin.exportUsersUrl();
+              window.open(url, '_blank');
+            }}>
+              <Download className="h-4 w-4" strokeWidth={1.5} />
+              CSV
+            </Button>
+            <Button className="h-11 gap-2 rounded-lg" onClick={() => setAddUserOpen(true)}>
+              <UserPlus className="h-4 w-4" strokeWidth={1.5} />
+              Добавить
+            </Button>
+          </>
+        )}
       </div>
+
+      {/* Platform toggle */}
+      {isSuperadmin && (
+        <div className="flex items-center justify-between rounded-xl border border-border bg-card px-4 py-3">
+          <div>
+            <p className="text-sm font-medium text-foreground">Платформа активна</p>
+            <p className="text-xs text-muted-foreground">При включении участницы получат ссылку для входа</p>
+          </div>
+          <Switch
+            checked={platformActive}
+            onCheckedChange={async (val) => {
+              setPlatformActive(val);
+              await api.admin.updateSetting("platform_active", String(val));
+              toast.success(val ? "Платформа включена — ссылки отправлены" : "Платформа выключена");
+            }}
+          />
+        </div>
+      )}
 
       {/* Tabs */}
       <div className="flex gap-2 border-b border-border overflow-x-auto">
