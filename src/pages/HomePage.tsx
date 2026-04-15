@@ -5,6 +5,7 @@ import CategoryCard from "@/components/CategoryCard";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useMaterials, useSections } from "@/hooks/useApiData";
 import { useAuth } from "@/contexts/AuthContext";
+import { NewbiesSection } from "@/components/NewbiesSection";
 
 const HomePage = () => {
   const scrollRef = useRef<HTMLDivElement>(null);
@@ -79,6 +80,8 @@ const HomePage = () => {
               ))}
         </div>
       </section>
+
+      <NewbiesSection />
 
       <section className="animate-slide-up" style={{ animationDelay: "0.2s" }}>
         <h2 className="mb-4 font-heading text-2xl font-semibold text-foreground">

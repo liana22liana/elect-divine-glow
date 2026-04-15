@@ -17,13 +17,15 @@ import InvitePage from "@/pages/InvitePage";
 import AccessPage from "@/pages/AccessPage";
 import ResetPasswordPage from "@/pages/ResetPasswordPage";
 import SubscriptionGate from "@/components/SubscriptionGate";
+import SubscriptionExpiredPage from "@/pages/SubscriptionExpiredPage";
 
 const queryClient = new QueryClient();
 
 const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
-  const { isAuthenticated, loading } = useAuth();
+  const { isAuthenticated, loading, subscriptionInactive } = useAuth();
   if (loading) return <div className="flex min-h-screen items-center justify-center text-muted-foreground">Загрузка...</div>;
   if (!isAuthenticated) return <Navigate to="/login" replace />;
+  if (subscriptionInactive) return <SubscriptionExpiredPage />;
   return <>{children}</>;
 };
 

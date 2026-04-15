@@ -1,10 +1,11 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useParams, Link, useSearchParams, useNavigate } from "react-router-dom";
 import { ArrowLeft, Video, Headphones, Play, Lock, CheckCircle, Circle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useMaterial, useSections, useMaterialProgress, useMarkWatched, useUnmarkWatched } from "@/hooks/useApiData";
 import { useAuth } from "@/contexts/AuthContext";
+import { Timecodes } from "@/components/Timecodes";
 import { AMBASSADOR_MILESTONES } from "@/lib/types";
 import type { AmbassadorStatus } from "@/lib/types";
 
@@ -12,6 +13,7 @@ const MaterialPage = () => {
   const { id } = useParams();
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
+  const iframeRef = useRef<HTMLIFrameElement>(null);
   const isPreview = searchParams.get("preview") === "1";
   const { data: material, isLoading } = useMaterial(id || "");
   const { data: sections = [] } = useSections();
@@ -23,7 +25,6 @@ const MaterialPage = () => {
 
   useEffect(() => {
     if (!isPreview) { setShowOverlay(false); return; }
-    // Show overlay after 15 seconds of preview
     setShowOverlay(false);
     const timer = setTimeout(() => setShowOverlay(true), 15000);
     return () => clearTimeout(timer);
@@ -44,9 +45,7 @@ const MaterialPage = () => {
     return (
       <div className="flex flex-col items-center justify-center py-20">
         <p className="text-lg text-muted-foreground">Материал не найден</p>
-        <Link to="/library" className="mt-4 text-primary underline">
-          Вернуться в библиотеку
-        </Link>
+        <Link to="/library" className="mt-4 text-primary underline">Вернуться в библиотеку</Link>
       </div>
     );
   }
@@ -55,32 +54,24 @@ const MaterialPage = () => {
   const subsection = section?.subsections.find((sub) => String(sub.id) === String(material.subsection_id));
   const additionalMaterials = material.additional_materials || [];
 
-  // Convert YouTube URLs to embed format
   const getEmbedUrl = (url: string) => {
     if (!url) return url;
-    // youtube.com/watch?v=ID
     const watchMatch = url.match(/(?:youtube\.com\/watch\?v=)([a-zA-Z0-9_-]+)/);
-    if (watchMatch) return `https://www.youtube.com/embed/${watchMatch[1]}`;
-    // youtu.be/ID
+    if (watchMatch) return `https://www.youtube.com/embed/${watchMatch[1]}?enablejsapi=1`;
     const shortMatch = url.match(/(?:youtu\.be\/)([a-zA-Z0-9_-]+)/);
-    if (shortMatch) return `https://www.youtube.com/embed/${shortMatch[1]}`;
-    // youtube.com/shorts/ID
+    if (shortMatch) return `https://www.youtube.com/embed/${shortMatch[1]}?enablejsapi=1`;
     const shortsMatch = url.match(/(?:youtube\.com\/shorts\/)([a-zA-Z0-9_-]+)/);
-    if (shortsMatch) return `https://www.youtube.com/embed/${shortsMatch[1]}`;
-    // kinescope.io/ID → kinescope.io/embed/ID
+    if (shortsMatch) return `https://www.youtube.com/embed/${shortsMatch[1]}?enablejsapi=1`;
     const kinescopeMatch = url.match(/kinescope\.io\/(?!embed\/)([a-zA-Z0-9]+)/);
     if (kinescopeMatch) return `https://kinescope.io/embed/${kinescopeMatch[1]}`;
-    // already embed or other
     return url;
   };
 
   const embedUrl = getEmbedUrl(material.video_url);
-
   const isWatched = progressData.some(p => String(p.material_id) === String(material?.id));
 
-  // Ambassador access check
-  const isAdmin = user?.role === 'admin' || user?.role === 'superadmin';
-  const statusOrder: AmbassadorStatus[] = ['rising', 'becoming', 'transformed', 'reborn'];
+  const isAdmin = user?.role === "admin" || user?.role === "superadmin";
+  const statusOrder: AmbassadorStatus[] = ["rising", "becoming", "transformed", "reborn"];
   const userStatusIdx = user?.ambassador_status ? statusOrder.indexOf(user.ambassador_status) : -1;
   const requiredStatusIdx = material.required_ambassador_status ? statusOrder.indexOf(material.required_ambassador_status) : -1;
   const isLocked = material.required_ambassador_status && !isAdmin && userStatusIdx < requiredStatusIdx;
@@ -89,10 +80,7 @@ const MaterialPage = () => {
   if (isLocked) {
     return (
       <div className="space-y-6">
-        <Link
-          to="/library"
-          className="inline-flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground transition-colors"
-        >
+        <Link to="/library" className="inline-flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground transition-colors">
           <ArrowLeft className="h-4 w-4" strokeWidth={1.5} />
           Назад к библиотеке
         </Link>
@@ -101,9 +89,7 @@ const MaterialPage = () => {
             <Lock className="h-10 w-10 text-primary" strokeWidth={1.5} />
           </div>
           <div className="space-y-2 max-w-sm">
-            <h1 className="font-heading text-2xl font-semibold text-foreground">
-              {material.title}
-            </h1>
+            <h1 className="font-heading text-2xl font-semibold text-foreground">{material.title}</h1>
             <p className="text-sm text-muted-foreground leading-relaxed">
               Этот материал доступен для участниц со статусом «{requiredMilestone?.label}» ({requiredMilestone?.months} мес. в клубе).
               Продолжай быть в клубе — и скоро он откроется! ✨
@@ -116,10 +102,7 @@ const MaterialPage = () => {
 
   return (
     <div className="space-y-6">
-      <Link
-        to="/library"
-        className="inline-flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground transition-colors"
-      >
+      <Link to="/library" className="inline-flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground transition-colors">
         <ArrowLeft className="h-4 w-4" strokeWidth={1.5} />
         Назад к библиотеке
       </Link>
@@ -129,6 +112,7 @@ const MaterialPage = () => {
         {material.type === "video" && material.video_url ? (
           <div className="aspect-video">
             <iframe
+              ref={iframeRef}
               src={embedUrl}
               className="h-full w-full"
               allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
@@ -139,28 +123,16 @@ const MaterialPage = () => {
         ) : (
           <div className="flex aspect-video items-center justify-center">
             <div className="flex flex-col items-center gap-3 text-muted-foreground">
-              {material.type === "video" ? (
-                <Video className="h-16 w-16" strokeWidth={1} />
-              ) : (
-                <Headphones className="h-16 w-16" strokeWidth={1} />
-              )}
-              <p className="text-sm">
-                {material.type === "video" ? "Видео скоро будет доступно" : "Аудио плеер"}
-              </p>
+              {material.type === "video" ? <Video className="h-16 w-16" strokeWidth={1} /> : <Headphones className="h-16 w-16" strokeWidth={1} />}
+              <p className="text-sm">{material.type === "video" ? "Видео скоро будет доступно" : "Аудио плеер"}</p>
             </div>
           </div>
         )}
-
         {isPreview && showOverlay && (
           <div className="absolute inset-0 flex flex-col items-center justify-end bg-gradient-to-t from-foreground/80 via-foreground/30 to-transparent p-6">
             <div className="flex flex-col items-center gap-3 text-center">
-              <p className="text-sm font-medium text-primary-foreground">
-                Это превью — нажмите для полного просмотра
-              </p>
-              <Button
-                onClick={() => navigate(`/material/${id}`, { replace: true })}
-                className="gap-2"
-              >
+              <p className="text-sm font-medium text-primary-foreground">Это превью — нажмите для полного просмотра</p>
+              <Button onClick={() => navigate(`/material/${id}`, { replace: true })} className="gap-2">
                 <Play className="h-4 w-4" />
                 {material.type === "video" ? "Смотреть полностью" : "Слушать полностью"}
               </Button>
@@ -169,81 +141,48 @@ const MaterialPage = () => {
         )}
       </div>
 
+      {/* Timecodes */}
+      {material.video_url && (
+        <Timecodes materialId={material.id} iframeRef={iframeRef} videoUrl={material.video_url} />
+      )}
+
       {/* Info */}
       <div className="space-y-4">
-        <h1 className="font-heading text-2xl font-semibold text-foreground lg:text-3xl">
-          {material.title}
-        </h1>
-
+        <h1 className="font-heading text-2xl font-semibold text-foreground lg:text-3xl">{material.title}</h1>
         <div className="flex flex-wrap items-center gap-3">
           {section && (
-            <span className="rounded-full border border-primary/30 bg-primary/10 px-3 py-1 text-sm font-medium text-primary">
-              {section.name}
-            </span>
+            <span className="rounded-full border border-primary/30 bg-primary/10 px-3 py-1 text-sm font-medium text-primary">{section.name}</span>
           )}
           {subsection && (
-            <span className="rounded-full border border-secondary/30 bg-secondary/10 px-3 py-1 text-sm font-medium text-secondary">
-              {subsection.name}
-            </span>
+            <span className="rounded-full border border-secondary/30 bg-secondary/10 px-3 py-1 text-sm font-medium text-secondary">{subsection.name}</span>
           )}
           <span className="text-sm text-muted-foreground">
-            {new Date(material.created_at).toLocaleDateString("ru-RU", {
-              day: "numeric",
-              month: "long",
-              year: "numeric",
-            })}
+            {new Date(material.created_at).toLocaleDateString("ru-RU", { day: "numeric", month: "long", year: "numeric" })}
           </span>
         </div>
-
-        <p className="text-base leading-relaxed text-foreground/80 whitespace-pre-line">
-          {material.description}
-        </p>
-
-        {/* Watch progress toggle */}
+        <p className="text-base leading-relaxed text-foreground/80 whitespace-pre-line">{material.description}</p>
         <button
           onClick={() => isWatched ? unmarkWatched.mutate(String(material.id)) : markWatched.mutate(String(material.id))}
-          className={`flex items-center gap-2 rounded-xl px-4 py-2.5 text-sm font-medium transition-colors ${
-            isWatched
-              ? 'bg-green-50 text-green-700 hover:bg-green-100'
-              : 'bg-muted text-muted-foreground hover:bg-muted/80'
-          }`}
+          className={`flex items-center gap-2 rounded-xl px-4 py-2.5 text-sm font-medium transition-colors ${isWatched ? "bg-green-50 text-green-700 hover:bg-green-100" : "bg-muted text-muted-foreground hover:bg-muted/80"}`}
         >
-          {isWatched ? (
-            <><CheckCircle className="h-4 w-4" /> Просмотрено</>
-          ) : (
-            <><Circle className="h-4 w-4" /> Отметить просмотренным</>
-          )}
+          {isWatched ? <><CheckCircle className="h-4 w-4" /> Просмотрено</> : <><Circle className="h-4 w-4" /> Отметить просмотренным</>}
         </button>
       </div>
 
       {additionalMaterials.map((am) => (
         <div key={am.id} className="space-y-4">
           <div className="h-px bg-border" />
-          <h2 className="font-heading text-xl font-semibold text-foreground">
-            {am.title}
-          </h2>
-          {am.description && (
-            <p className="text-sm text-foreground/80">{am.description}</p>
-          )}
+          <h2 className="font-heading text-xl font-semibold text-foreground">{am.title}</h2>
+          {am.description && <p className="text-sm text-foreground/80">{am.description}</p>}
           <div className="relative overflow-hidden rounded-lg bg-muted">
             {am.url ? (
               <div className="aspect-video">
-                <iframe
-                  src={getEmbedUrl(am.url)}
-                  className="h-full w-full"
-                  allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-                  allowFullScreen
-                  title={am.title}
-                />
+                <iframe src={getEmbedUrl(am.url)} className="h-full w-full" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowFullScreen title={am.title} />
               </div>
             ) : (
               <div className="flex aspect-video items-center justify-center">
                 <div className="flex flex-col items-center gap-3 text-muted-foreground">
-                  {am.type === "video" ? (
-                    <Video className="h-16 w-16" strokeWidth={1} />
-                  ) : (
-                    <Headphones className="h-16 w-16" strokeWidth={1} />
-                  )}
+                  {am.type === "video" ? <Video className="h-16 w-16" strokeWidth={1} /> : <Headphones className="h-16 w-16" strokeWidth={1} />}
                 </div>
               </div>
             )}
