@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { useQueryClient } from "@tanstack/react-query";
 import {
   Plus, Pencil, Trash2, Video, Headphones, Users as UsersIcon,
   Sparkles, Search, Layers, GripVertical, ChevronDown, ChevronRight,
@@ -40,7 +41,7 @@ import {
 } from "@/hooks/useApiData";
 import { api } from "@/lib/api";
 
-type TabId = AdminTabId | "newbies";
+type TabId = string;
 
 type DeleteTarget = {
   type: "material" | "section" | "subsection" | "template" | "user";
@@ -59,6 +60,7 @@ const DELETE_MESSAGES: Record<string, { title: string; desc: string }> = {
 const AdminPage = () => {
   const { user: currentUser } = useAuth();
   const isSuperadmin = currentUser?.role === "superadmin";
+  const queryClient = useQueryClient();
 
   const allTabs = [
     { id: "materials" as const, label: "Материалы", icon: Video },
@@ -71,7 +73,7 @@ const AdminPage = () => {
 
   const visibleTabs = isSuperadmin
     ? allTabs
-    : allTabs.filter((t) => currentUser?.admin_permissions?.includes(t.id));
+    : allTabs.filter((t) => t.id === "newbies" ? false : currentUser?.admin_permissions?.includes(t.id as any));
 
   const [activeTab, setActiveTab] = useState<TabId>(visibleTabs[0]?.id || "materials");
 
@@ -138,6 +140,7 @@ const AdminPage = () => {
   const [newUserEmail, setNewUserEmail] = useState("");
   const [newUserEndDate, setNewUserEndDate] = useState("");
   const [addingUser, setAddingUser] = useState(false);
+  const [newUserSendLink, setNewUserSendLink] = useState(false);
 
   // ── Data queries ──
   const { data: sections = [], isLoading: loadingSec } = useSections();
@@ -151,12 +154,13 @@ const AdminPage = () => {
   // Load newbies items
   const loadNewbies = () => {
     setNewbiesLoading(true);
+    const token = localStorage.getItem("elect_token") || sessionStorage.getItem("elect_token") || "";
     fetch("/api/newbies/admin", {
-      headers: { Authorization: `Bearer ${localStorage.getItem("elect_token") || sessionStorage.getItem("elect_token")}` }
+      headers: { Authorization: "Bearer " + token }
     })
       .then(r => r.json())
       .then(data => { setNewbiesItems(Array.isArray(data) ? data : []); setNewbiesLoading(false); })
-      .catch(() => setNewbiesLoading(false));
+      .catch(e => { console.error("newbies load error:", e); setNewbiesLoading(false); });
   };
   useEffect(() => { if (activeTab === "newbies") loadNewbies(); }, [activeTab]);
 
@@ -579,7 +583,34 @@ const AdminPage = () => {
               return (
                 <div key={section.id} className="rounded-lg border border-border bg-card overflow-hidden">
                   <div className="flex items-center gap-3 p-4">
-                    <GripVertical className="h-4 w-4 text-muted-foreground/50 cursor-grab" />
+                    <div className="flex flex-col gap-0.5">
+                      <button
+                        className="p-0.5 text-muted-foreground hover:text-foreground disabled:opacity-30"
+                        disabled={sections.indexOf(section) === 0}
+                        onClick={async () => {
+                          const idx = sections.indexOf(section);
+                          const prev = sections[idx - 1];
+                          await Promise.all([
+                            api.admin.sections.update(section.id, { order_index: prev.order_index }),
+                            api.admin.sections.update(prev.id, { order_index: section.order_index })
+                          ]);
+                          queryClient.invalidateQueries({ queryKey: ["sections"] });
+                        }}
+                      >▲</button>
+                      <button
+                        className="p-0.5 text-muted-foreground hover:text-foreground disabled:opacity-30"
+                        disabled={sections.indexOf(section) === sections.length - 1}
+                        onClick={async () => {
+                          const idx = sections.indexOf(section);
+                          const next = sections[idx + 1];
+                          await Promise.all([
+                            api.admin.sections.update(section.id, { order_index: next.order_index }),
+                            api.admin.sections.update(next.id, { order_index: section.order_index })
+                          ]);
+                          queryClient.invalidateQueries({ queryKey: ["sections"] });
+                        }}
+                      >▼</button>
+                    </div>
                     {hasSubs ? (
                       <button onClick={() => toggleSection(section.id)} className="p-0.5">
                         {isExpanded ? <ChevronDown className="h-4 w-4 text-muted-foreground" /> : <ChevronRight className="h-4 w-4 text-muted-foreground" />}
@@ -1019,7 +1050,7 @@ const AdminPage = () => {
               <Select value={matRequiredStatus} onValueChange={setMatRequiredStatus}>
                 <SelectTrigger className="h-11"><SelectValue placeholder="Доступен всем" /></SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">Доступен всем</SelectItem>
+                  <SelectItem value="none">Доступен всем</SelectItem>
                   {AMBASSADOR_MILESTONES.map((m) => (
                     <SelectItem key={m.status} value={m.status}>
                       🔒 {m.label} ({m.months} мес.)
@@ -1410,7 +1441,195 @@ const AdminPage = () => {
       </Dialog>
 
       {/* ═══════════ Universal delete confirmation ═══════════ */}
-      <AlertDialog open={!!deleteTarget} onOpenChange={(open) => !open && setDeleteTarget(null)}>
+      
+        {/* ═══════════ Newbies tab ═══════════ */}
+        {activeTab === "newbies" && isSuperadmin && (
+          <div className="space-y-3">
+            {newbiesLoading ? (
+              Array.from({ length: 3 }).map((_, i) => <Skeleton key={i} className="h-16 w-full rounded-lg" />)
+            ) : newbiesItems.length === 0 ? (
+              <p className="text-sm text-muted-foreground text-center py-8">Нет разделов. Нажмите «Добавить раздел».</p>
+            ) : (
+              newbiesItems.map((item) => (
+                <div key={item.id} className="flex items-center justify-between rounded-lg border border-border bg-card p-4">
+                  <div className="min-w-0 flex-1">
+                    <p className="font-medium text-foreground text-sm">{item.title}</p>
+                    <p className="text-xs text-muted-foreground mt-0.5 line-clamp-1">{item.content?.slice(0, 80)}{item.content?.length > 80 ? "..." : ""}</p>
+                    {item.link && <p className="text-xs text-primary mt-0.5">{item.link_label || item.link}</p>}
+                  </div>
+                  <div className="flex gap-2 ml-4 shrink-0">
+                    <div className="flex flex-col gap-0.5 mr-1">
+                      <button
+                        className="text-xs text-muted-foreground hover:text-foreground disabled:opacity-30 px-1"
+                        disabled={newbiesItems.indexOf(item) === 0}
+                        onClick={async () => {
+                          const idx = newbiesItems.indexOf(item);
+                          const prev = newbiesItems[idx - 1];
+                          const token = localStorage.getItem("elect_token") || sessionStorage.getItem("elect_token") || "";
+                          await Promise.all([
+                            fetch("/api/newbies/admin/" + item.id, { method: "PUT", headers: { "Content-Type": "application/json", Authorization: "Bearer " + token }, body: JSON.stringify({ title: item.title, content: item.content, emoji: item.emoji, link: item.link, link_label: item.link_label, order_index: prev.order_index }) }),
+                            fetch("/api/newbies/admin/" + prev.id, { method: "PUT", headers: { "Content-Type": "application/json", Authorization: "Bearer " + token }, body: JSON.stringify({ title: prev.title, content: prev.content, emoji: prev.emoji, link: prev.link, link_label: prev.link_label, order_index: item.order_index }) })
+                          ]);
+                          loadNewbies();
+                        }}
+                      >▲</button>
+                      <button
+                        className="text-xs text-muted-foreground hover:text-foreground disabled:opacity-30 px-1"
+                        disabled={newbiesItems.indexOf(item) === newbiesItems.length - 1}
+                        onClick={async () => {
+                          const idx = newbiesItems.indexOf(item);
+                          const next = newbiesItems[idx + 1];
+                          const token = localStorage.getItem("elect_token") || sessionStorage.getItem("elect_token") || "";
+                          await Promise.all([
+                            fetch("/api/newbies/admin/" + item.id, { method: "PUT", headers: { "Content-Type": "application/json", Authorization: "Bearer " + token }, body: JSON.stringify({ title: item.title, content: item.content, emoji: item.emoji, link: item.link, link_label: item.link_label, order_index: next.order_index }) }),
+                            fetch("/api/newbies/admin/" + next.id, { method: "PUT", headers: { "Content-Type": "application/json", Authorization: "Bearer " + token }, body: JSON.stringify({ title: next.title, content: next.content, emoji: next.emoji, link: next.link, link_label: next.link_label, order_index: item.order_index }) })
+                          ]);
+                          loadNewbies();
+                        }}
+                      >▼</button>
+                    </div>
+                    <Button variant="outline" size="sm" onClick={() => {
+                      setEditingNewbie(item);
+                      setNewbieTitle(item.title);
+                      setNewbieContent(item.content || "");
+                      setNewbieLink(item.link || "");
+                      setNewbieLinkLabel(item.link_label || "");
+                      setNewbieOrder(item.order_index || 0);
+                      setNewbiesDialogOpen(true);
+                    }}>
+                      <Pencil className="h-3.5 w-3.5" />
+                    </Button>
+                    <Button variant="outline" size="sm" className="text-destructive hover:text-destructive" onClick={async () => {
+                      if (!confirm("Удалить раздел «" + item.title + "»?")) return;
+                      const token = localStorage.getItem("elect_token") || sessionStorage.getItem("elect_token") || "";
+                      await fetch("/api/newbies/admin/" + item.id, {
+                        method: "DELETE",
+                        headers: { Authorization: "Bearer " + token }
+                      });
+                      loadNewbies();
+                      toast.success("Раздел удалён");
+                    }}>
+                      <Trash2 className="h-3.5 w-3.5" />
+                    </Button>
+                  </div>
+                </div>
+              ))
+            )}
+          </div>
+        )}
+
+
+      {/* Add user dialog */}
+      <Dialog open={addUserOpen} onOpenChange={setAddUserOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Добавить участницу</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 pt-2">
+            <div className="space-y-2">
+              <Label>Telegram ID <span className="text-destructive">*</span></Label>
+              <Input placeholder="123456789" value={newUserTgId} onChange={e => setNewUserTgId(e.target.value)} />
+            </div>
+            <div className="space-y-2">
+              <Label>Имя</Label>
+              <Input placeholder="Имя участницы" value={newUserName} onChange={e => setNewUserName(e.target.value)} />
+            </div>
+            <div className="space-y-2">
+              <Label>Email</Label>
+              <Input placeholder="email@example.com" value={newUserEmail} onChange={e => setNewUserEmail(e.target.value)} />
+            </div>
+            <div className="space-y-2">
+              <Label>Дата окончания доступа</Label>
+              <Input type="date" value={newUserEndDate} onChange={e => setNewUserEndDate(e.target.value)} />
+            </div>
+            <div className="rounded-xl border border-border bg-muted/30 px-4 py-3">
+              <p className="text-xs text-muted-foreground">Участница получит ссылку для входа в Telegram</p>
+            </div>
+            <div className="flex gap-2 justify-end pt-2">
+              <Button variant="outline" onClick={() => setAddUserOpen(false)}>Отмена</Button>
+              <Button
+                disabled={!newUserTgId || addingUser}
+                onClick={async () => {
+                  setAddingUser(true);
+                  try {
+                    await api.admin.createUser({
+                      telegram_id: newUserTgId,
+                      name: newUserName,
+                      email: newUserEmail,
+                      subscription_end: newUserEndDate || undefined,
+                    });
+                    toast.success("Участница добавлена — ссылка отправлена в Telegram");
+                    setAddUserOpen(false);
+                    setNewUserTgId(""); setNewUserName(""); setNewUserEmail(""); setNewUserEndDate("");
+                  } catch (e: any) {
+                    toast.error(e.message || "Ошибка");
+                  } finally {
+                    setAddingUser(false);
+                  }
+                }}
+              >
+                {addingUser ? "Добавляем..." : "Добавить"}
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Newbies edit dialog */}
+      <Dialog open={newbiesDialogOpen} onOpenChange={setNewbiesDialogOpen}>
+        <DialogContent className="sm:max-w-lg max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>{editingNewbie ? "Редактировать раздел" : "Новый раздел"}</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 pt-2">
+            <div className="space-y-2">
+              <Label>Название</Label>
+              <Input value={newbieTitle} onChange={e => setNewbieTitle(e.target.value)} placeholder="Название раздела" />
+            </div>
+            <div className="space-y-2">
+              <Label>Текст</Label>
+              <Textarea value={newbieContent} onChange={e => setNewbieContent(e.target.value)} placeholder="Содержимое раздела..." rows={8} className="resize-none" />
+            </div>
+            <div className="space-y-2">
+              <Label>Ссылка (необязательно)</Label>
+              <Input value={newbieLink} onChange={e => setNewbieLink(e.target.value)} placeholder="https://t.me/..." />
+            </div>
+            <div className="space-y-2">
+              <Label>Текст кнопки</Label>
+              <Input value={newbieLinkLabel} onChange={e => setNewbieLinkLabel(e.target.value)} placeholder="Вступить в чат" />
+            </div>
+            <div className="flex gap-2 justify-end pt-2">
+              <Button variant="outline" onClick={() => { setNewbiesDialogOpen(false); setEditingNewbie(null); }}>Отмена</Button>
+              <Button
+                disabled={!newbieTitle || savingNewbie}
+                onClick={async () => {
+                  setSavingNewbie(true);
+                  const token = localStorage.getItem("elect_token") || sessionStorage.getItem("elect_token") || "";
+                  const body = { title: newbieTitle, content: newbieContent, link: newbieLink || null, link_label: newbieLinkLabel || null, order_index: newbieOrder };
+                  try {
+                    if (editingNewbie) {
+                      await fetch("/api/newbies/admin/" + editingNewbie.id, { method: "PUT", headers: { "Content-Type": "application/json", Authorization: "Bearer " + token }, body: JSON.stringify(body) });
+                      toast.success("Раздел обновлён");
+                    } else {
+                      await fetch("/api/newbies/admin", { method: "POST", headers: { "Content-Type": "application/json", Authorization: "Bearer " + token }, body: JSON.stringify(body) });
+                      toast.success("Раздел добавлен");
+                    }
+                    setNewbiesDialogOpen(false);
+                    setEditingNewbie(null);
+                    setNewbieTitle(""); setNewbieContent(""); setNewbieLink(""); setNewbieLinkLabel(""); setNewbieOrder(0);
+                    loadNewbies();
+                  } catch(e) { toast.error("Ошибка"); }
+                  finally { setSavingNewbie(false); }
+                }}
+              >
+                {savingNewbie ? "Сохраняем..." : "Сохранить"}
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+<AlertDialog open={!!deleteTarget} onOpenChange={(open) => !open && setDeleteTarget(null)}>
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>{deleteTarget ? DELETE_MESSAGES[deleteTarget.type].title : ""}</AlertDialogTitle>

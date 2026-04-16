@@ -158,6 +158,9 @@ export const api = {
     materials: () => request<any[]>("/admin/materials"),
     updateUser: (id: string, data: Record<string, any>) =>
       request<any>(`/admin/users/${id}`, { method: "PUT", body: JSON.stringify(data) }),
+    settings: () => request<any>("/admin/settings"),
+    updateSetting: (key: string, value: any) => request<any>("/admin/settings", { method: "POST", body: JSON.stringify({ key, value }) }),
+    createUser: (data: any) => request<any>("/admin/users", { method: "POST", body: JSON.stringify(data) }),
     deleteUser: (id: string) =>
       request<void>(`/admin/users/${id}`, { method: "DELETE" }),
     resetUserPassword: (id: string, password: string) =>
