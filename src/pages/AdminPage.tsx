@@ -7,6 +7,7 @@ import {
   Calendar, MapPin, Phone, Mail, UserPlus, Link, Copy, Clock,
 } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
+import { AnalyticsTab } from "@/components/AnalyticsTab";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -69,6 +70,7 @@ const AdminPage = () => {
     { id: "recommendations" as const, label: "Рекомендации", icon: Sparkles },
     ...(isSuperadmin ? [{ id: "team" as const, label: "Команда", icon: UserPlus }] : []),
     ...(isSuperadmin ? [{ id: "newbies" as const, label: "Новеньким", icon: Sparkles }] : []),
+    ...(isSuperadmin ? [{ id: "analytics" as const, label: "Статистика", icon: BarChart3 }] : []),
   ];
 
   const visibleTabs = isSuperadmin
@@ -86,6 +88,7 @@ const AdminPage = () => {
 
   // Filters
   const [searchQuery, setSearchQuery] = useState("");
+  const [userSearch, setUserSearch] = useState("");
   const [filterCategory, setFilterCategory] = useState("all");
   const [expandedSections, setExpandedSections] = useState<Set<string>>(new Set());
   const [expandedUsers, setExpandedUsers] = useState<Set<string>>(new Set());
@@ -443,6 +446,9 @@ const AdminPage = () => {
             Добавить раздел
           </Button>
         )}
+        {activeTab === "analytics" && isSuperadmin && (
+          <AnalyticsTab />
+        )}
         {activeTab === "users" && (
           <>
             <Button variant="outline" className="h-11 gap-2 rounded-lg" onClick={() => {
@@ -537,6 +543,34 @@ const AdminPage = () => {
                     </p>
                   </div>
                   <div className="flex items-center gap-2">
+                    <div className="flex flex-col gap-0.5">
+                      <button
+                        className="text-xs text-muted-foreground hover:text-foreground disabled:opacity-30 px-1 leading-none"
+                        disabled={filteredMaterials.indexOf(material) === 0}
+                        onClick={async () => {
+                          const idx = filteredMaterials.indexOf(material);
+                          const prev = filteredMaterials[idx - 1];
+                          await Promise.all([
+                            api.admin.updateMaterial(material.id, { order_index: prev.order_index ?? idx - 1 }),
+                            api.admin.updateMaterial(prev.id, { order_index: material.order_index ?? idx })
+                          ]);
+                          queryClient.invalidateQueries({ queryKey: ["admin", "materials"] });
+                        }}
+                      >▲</button>
+                      <button
+                        className="text-xs text-muted-foreground hover:text-foreground disabled:opacity-30 px-1 leading-none"
+                        disabled={filteredMaterials.indexOf(material) === filteredMaterials.length - 1}
+                        onClick={async () => {
+                          const idx = filteredMaterials.indexOf(material);
+                          const next = filteredMaterials[idx + 1];
+                          await Promise.all([
+                            api.admin.updateMaterial(material.id, { order_index: next.order_index ?? idx + 1 }),
+                            api.admin.updateMaterial(next.id, { order_index: material.order_index ?? idx })
+                          ]);
+                          queryClient.invalidateQueries({ queryKey: ["admin", "materials"] });
+                        }}
+                      >▼</button>
+                    </div>
                     {material.is_published === false && (
                       <span className="flex items-center gap-1 rounded-full bg-yellow-100 px-2 py-0.5 text-[10px] font-medium text-yellow-700">
                         <EyeOff className="h-3 w-3" /> Черновик
@@ -665,10 +699,28 @@ const AdminPage = () => {
       {/* ═══════════ Users list ═══════════ */}
       {activeTab === "users" && (
         <div className="space-y-3">
+          <div className="relative">
+            <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+            <Input
+              placeholder="Поиск по имени, email или Telegram ID..."
+              className="h-10 pl-9"
+              value={userSearch}
+              onChange={e => setUserSearch(e.target.value)}
+            />
+          </div>
           {loadingUsers ? (
             Array.from({ length: 3 }).map((_, i) => <Skeleton key={i} className="h-20 w-full rounded-lg" />)
           ) : (
-            users.map((user) => {
+            users.filter(user => {
+              if (!userSearch.trim()) return true;
+              const q = userSearch.toLowerCase().trim();
+              return (
+                user.name?.toLowerCase().includes(q) ||
+                user.email?.toLowerCase().includes(q) ||
+                String(user.telegram_id || "").includes(q) ||
+                String(user.id).includes(q)
+              );
+            }).map((user) => {
               const isExpanded = expandedUsers.has(user.id);
               const statusLabel = AMBASSADOR_MILESTONES.find((m) => m.status === user.ambassador_status)?.label;
               const subColor = user.subscription_status === "active" ? "bg-green-500"

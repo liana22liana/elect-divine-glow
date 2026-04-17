@@ -53,10 +53,10 @@ export const api = {
         method: "POST",
         body: JSON.stringify({ email, password }),
       }),
-    register: (email: string, password: string, name: string) =>
+    register: (email: string, password: string, name: string, invite_token?: string) =>
       request<{ token: string; user: any }>("/auth/register", {
         method: "POST",
-        body: JSON.stringify({ email, password, name }),
+        body: JSON.stringify({ email, password, name, invite_token }),
       }),
     me: () => request<any>("/auth/me"),
     accessLink: (token: string) =>
@@ -167,6 +167,7 @@ export const api = {
       request<any>(`/admin/users/${id}/reset-password`, { method: "POST", body: JSON.stringify({ password }) }),
     sendAccess: (id: string) =>
       request<{ ok: boolean; url: string; telegram_sent: boolean }>(`/admin/users/${id}/send-access`, { method: "POST" }),
+    analytics: () => request<any>("/admin/analytics"),
     deliveryForms: () => request<any[]>("/admin/delivery-forms"),
     exportUsersUrl: () => {
       const token = getToken();
@@ -176,6 +177,8 @@ export const api = {
       request<any>(`/admin/materials/${materialId}/additional`, { method: "POST", body: JSON.stringify(data) }),
     deleteAdditionalMaterial: (id: string) =>
       request<void>(`/admin/additional/${id}`, { method: "DELETE" }),
+    updateMaterial: (id: string, data: Record<string, any>) =>
+      request<any>(`/admin/materials/${id}`, { method: "PUT", body: JSON.stringify(data) }),
     sections: {
       create: (data: Record<string, any>) =>
         request<any>("/admin/sections", { method: "POST", body: JSON.stringify(data) }),
